@@ -225,3 +225,128 @@ func DeleteUser(userID int) error {
 	delete(_Bar_cache, userID)
 	return nil
 }
+
+func _User_validateName(name string) error {
+	if name == "" {
+		return &sheetdb.EmptyStringError{FieldName: "Name"}
+	}
+	return nil
+}
+
+func _User_validateEmail(email string, userID *int) error {
+	if email == "" {
+		return &sheetdb.EmptyStringError{FieldName: "Email"}
+	}
+	if userID == nil {
+		for _, v := range _User_cache {
+			if email == v.Email {
+				return &sheetdb.DuplicationError{FieldName: "Email"}
+			}
+		}
+	} else {
+		for _, v := range _User_cache {
+			if v.UserID == *userID {
+				continue
+			}
+			if email == v.Email {
+				return &sheetdb.DuplicationError{FieldName: "Email"}
+			}
+		}
+	}
+	return nil
+}
+
+func _User_parseUserID(userID string) (int, error) {
+	v, err := strconv.Atoi(userID)
+	if err != nil {
+		return 0, &sheetdb.InvalidValueError{FieldName: "UserID", Err: err}
+	}
+	return v, nil
+}
+
+func _User_parseSex(sex string) (Sex, error) {
+	v, err := NewSex(sex)
+	if err != nil {
+		return v, &sheetdb.InvalidValueError{FieldName: "Sex", Err: err}
+	}
+	return v, nil
+}
+
+func _User_parseBirthday(birthday string) (*sheetdb.Date, error) {
+	var val *sheetdb.Date
+	if birthday != "" {
+		v, err := sheetdb.NewDate(birthday)
+		if err != nil {
+			return nil, &sheetdb.InvalidValueError{FieldName: "Birthday", Err: err}
+		}
+		val = &v
+	}
+	return val, nil
+}
+
+func (m *User) _asyncUpdate() error {
+	data := []gsheets.UpdateValue{
+		{
+			SheetName: _User_sheetName,
+			RowNo:     _User_rowNoMap[m.UserID],
+			Values: []interface{}{
+				m.UserID,
+				m.Name,
+				m.Email,
+				m.Sex.String(),
+				m.Birthday.String(),
+				time.Now(),
+				"",
+			},
+		},
+	}
+	return dbClient.AsyncUpdate(data)
+}
+
+func (m *User) _asyncDelete(foos []*Foo, bars []*Bar) error {
+	now := time.Now()
+	data := []gsheets.UpdateValue{
+		{
+			SheetName: _User_sheetName,
+			RowNo:     _User_rowNoMap[m.UserID],
+			Values: []interface{}{
+				m.UserID,
+				m.Name,
+				m.Email,
+				m.Sex.String(),
+				m.Birthday.String(),
+				now,
+				now,
+			},
+		},
+	}
+	for _, v := range foos {
+		data = append(data, gsheets.UpdateValue{
+			SheetName: _Foo_sheetName,
+			RowNo:     _Foo_rowNoMap[v.UserID][v.FooID],
+			Values: []interface{}{
+				v.UserID,
+				v.FooID,
+				v.Value,
+				v.Note,
+				now,
+				now,
+			},
+		})
+	}
+	for _, v := range bars {
+		data = append(data, gsheets.UpdateValue{
+			SheetName: _Bar_sheetName,
+			RowNo:     _Bar_rowNoMap[v.UserID][v.Datetime],
+			Values: []interface{}{
+				v.UserID,
+				v.Datetime.String(),
+				v.Value,
+				v.Note,
+				now,
+				now,
+			},
+		})
+	}
+	return dbClient.AsyncUpdate(data)
+}

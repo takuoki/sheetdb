@@ -226,19 +226,19 @@ func DeleteUser(userID int) error {
 
 func _User_validateName(name string) error {
 	if name == "" {
-		return &sheetdb.EmptyStringError{FieldName: "name"}
+		return &sheetdb.EmptyStringError{FieldName: "Name"}
 	}
 	return nil
 }
 
 func _User_validateEmail(email string, userID *int) error {
 	if email == "" {
-		return &sheetdb.EmptyStringError{FieldName: "email"}
+		return &sheetdb.EmptyStringError{FieldName: "Email"}
 	}
 	if userID == nil {
 		for _, v := range _User_cache {
 			if email == v.Email {
-				return &sheetdb.DuplicationError{FieldName: "email"}
+				return &sheetdb.DuplicationError{FieldName: "Email"}
 			}
 		}
 	} else {
@@ -247,7 +247,7 @@ func _User_validateEmail(email string, userID *int) error {
 				continue
 			}
 			if email == v.Email {
-				return &sheetdb.DuplicationError{FieldName: "email"}
+				return &sheetdb.DuplicationError{FieldName: "Email"}
 			}
 		}
 	}
@@ -257,7 +257,7 @@ func _User_validateEmail(email string, userID *int) error {
 func _User_parseUserID(userID string) (int, error) {
 	v, err := strconv.Atoi(userID)
 	if err != nil {
-		return 0, &sheetdb.InvalidValueError{FieldName: "userID", Err: err}
+		return 0, &sheetdb.InvalidValueError{FieldName: "UserID", Err: err}
 	}
 	return v, nil
 }
@@ -265,25 +265,24 @@ func _User_parseUserID(userID string) (int, error) {
 func _User_parseSex(sex string) (Sex, error) {
 	v, err := NewSex(sex)
 	if err != nil {
-		return 0, &sheetdb.InvalidValueError{FieldName: "sex", Err: err}
+		return v, &sheetdb.InvalidValueError{FieldName: "Sex", Err: err}
 	}
 	return v, nil
 }
 
 func _User_parseBirthday(birthday string) (*sheetdb.Date, error) {
-	var v *sheetdb.Date
+	var val *sheetdb.Date
 	if birthday != "" {
-		val, err := sheetdb.NewDate(birthday)
+		v, err := sheetdb.NewDate(birthday)
 		if err != nil {
-			return nil, &sheetdb.InvalidValueError{FieldName: "birthday", Err: err}
+			return nil, &sheetdb.InvalidValueError{FieldName: "Birthday", Err: err}
 		}
-		v = &val
+		val = &v
 	}
-	return v, nil
+	return val, nil
 }
 
 func (m *User) _asyncUpdate() error {
-
 	data := []gsheets.UpdateValue{
 		{
 			SheetName: _User_sheetName,
@@ -299,7 +298,6 @@ func (m *User) _asyncUpdate() error {
 			},
 		},
 	}
-
 	return dbClient.AsyncUpdate(data)
 }
 
