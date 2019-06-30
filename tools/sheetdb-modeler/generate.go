@@ -75,6 +75,16 @@ var (
 			{Name: "Value", NameLowerCamel: "value", Typ: "float32", NonPointerTyp: "float32"},
 			{Name: "Note", NameLowerCamel: "note", Typ: "string", NonPointerTyp: "string", AllowEmpty: true},
 		},
+		Parent: &model{
+			Name: "User",
+			Fields: []field{
+				{Name: "UserID", NameLowerCamel: "userID", Typ: "int", NonPointerTyp: "int", PrimaryKey: true},
+				{Name: "Name", NameLowerCamel: "name", Typ: "string", NonPointerTyp: "string"},
+				{Name: "Email", NameLowerCamel: "email", Typ: "string", NonPointerTyp: "string", Unique: true},
+				{Name: "Sex", NameLowerCamel: "sex", Typ: "Sex", NonPointerTyp: "Sex"},
+				{Name: "Birthday", NameLowerCamel: "birthday", Typ: "*sheetdb.Date", NonPointerTyp: "sheetdb.Date", TypPackage: "sheetdb", TypWithoutPackage: "Date", PointerTyp: true},
+			},
+		},
 	}
 
 	sampleBar = model{
@@ -87,6 +97,16 @@ var (
 			{Name: "Datetime", NameLowerCamel: "datetime", Typ: "sheetdb.Datetime", NonPointerTyp: "sheetdb.Datetime", TypPackage: "sheetdb", TypWithoutPackage: "Datetime", PrimaryKey: true},
 			{Name: "Value", NameLowerCamel: "value", Typ: "float32", NonPointerTyp: "float32"},
 			{Name: "Note", NameLowerCamel: "note", Typ: "string", NonPointerTyp: "string", AllowEmpty: true},
+		},
+		Parent: &model{
+			Name: "User",
+			Fields: []field{
+				{Name: "UserID", NameLowerCamel: "userID", Typ: "int", NonPointerTyp: "int", PrimaryKey: true},
+				{Name: "Name", NameLowerCamel: "name", Typ: "string", NonPointerTyp: "string"},
+				{Name: "Email", NameLowerCamel: "email", Typ: "string", NonPointerTyp: "string", Unique: true},
+				{Name: "Sex", NameLowerCamel: "sex", Typ: "Sex", NonPointerTyp: "Sex"},
+				{Name: "Birthday", NameLowerCamel: "birthday", Typ: "*sheetdb.Date", NonPointerTyp: "sheetdb.Date", TypPackage: "sheetdb", TypWithoutPackage: "Date", PointerTyp: true},
+			},
 		},
 	}
 )
@@ -220,18 +240,52 @@ func (g *Generator) outputLoad(m model) {
 	}
 	g.Printf("\n")
 
-	g.Printf("\t\t_%s_maxRowNo++\n", m.Name)
-	g.Printf("\t\t_%[1]s_cache[%[2]s] = &%[1]s{\n", m.Name, strings.Join(pkNames, "]["))
+	g.Printf("\t\t%[2]s := %[1]s{\n", m.Name, m.NameLowerCamel)
 	for _, f := range m.Fields {
 		g.Printf("\t\t\t%s: %s,\n", f.Name, f.NameLowerCamel)
 	}
+	g.Printf("\t\t}\n\n")
 
-	g.Printf("\t\t}\n")
+	g.Printf("\t\t_%s_maxRowNo++\n", m.Name)
+	g.outputParentMap(m)
+	g.Printf("\t\t_%[1]s_cache[%[3]s] = &%[2]s\n", m.Name, m.NameLowerCamel, strings.Join(pkNames, "]["))
 	g.Printf("\t\t_User_rowNoMap[userID] = _User_maxRowNo\n")
 	g.Printf("\t}\n\n")
 
 	g.Printf("\treturn nil\n")
 	g.Printf("}\n\n")
+}
+
+func (g *Generator) outputParentMap(m model) {
+	for i, f := range m.PrimaryKeys() {
+		if !f.ParentKey {
+			break
+		}
+		g.Printf("if _, ok := _%s_cache", m.Name)
+		for j, f2 := range m.PrimaryKeys() {
+			if j > i {
+				break
+			}
+			g.Printf("[%s.%s]", m.NameLowerCamel, f2.Name)
+		}
+		g.Printf("; !ok {\n")
+		g.Printf("\t	_%[1]s_cache", m.Name)
+		for j, f2 := range m.PrimaryKeys() {
+			if j > i {
+				break
+			}
+			g.Printf("[%s.%s]", m.NameLowerCamel, f2.Name)
+		}
+		g.Printf(" = map")
+		for j, f2 := range m.PrimaryKeys() {
+			if j > i {
+				break
+			}
+			g.Printf("[%s]", f2.Typ)
+		}
+		g.Printf("*%[1]s{}\n", m.Name)
+		g.Printf("}\n")
+	}
 }
 
 func (g *Generator) outputGet(m model) {
@@ -314,19 +368,29 @@ func (g *Generator) outputGetList(m model) {
 func (g *Generator) outputAdd(m model, o option) {
 	pkNamesWithModelPrefix := []string{}
 	nonKeyFields := []string{}
-	pkNameAndTypes := []string{}
+	nonPkNames := []string{}
+	parentKeyNameAndTypes := []string{}
+	var thisKeyNameAndType string
 	for _, f := range m.Fields {
 		if f.PrimaryKey {
 			pkNamesWithModelPrefix = append(pkNamesWithModelPrefix, m.NameLowerCamel+"."+f.Name)
-			if f.ParentKey || f.Typ != "int" || f.Name[len(f.Name)-2:] != "ID" {
-				pkNameAndTypes = append(pkNameAndTypes, f.NameLowerCamel+" "+f.Typ+", ")
+			if f.ParentKey {
+				parentKeyNameAndTypes = append(parentKeyNameAndTypes, f.NameLowerCamel+" "+f.Typ+", ")
+			} else if f.Typ != "int" || f.Name[len(f.Name)-2:] != "ID" {
+				thisKeyNameAndType = f.NameLowerCamel + " " + f.Typ + ", "
 			}
 		} else {
+			nonPkNames = append(nonPkNames, f.NameLowerCamel)
 			nonKeyFields = append(nonKeyFields, f.NameLowerCamel+" "+f.Typ)
 		}
 	}
 
-	g.Printf("func Add%[1]s(%[3]s%[2]s) (*%[1]s, error) {\n", m.Name, strings.Join(nonKeyFields, ", "), strings.Join(pkNameAndTypes, ""))
+	if m.Parent == nil {
+		g.Printf("func Add%[1]s(%[3]s%[4]s%[2]s) (*%[1]s, error) {\n", m.Name, strings.Join(nonKeyFields, ", "), strings.Join(parentKeyNameAndTypes, ""), thisKeyNameAndType)
+	} else {
+		g.Printf("func (m *%[3]s) Add%[1]s(%[4]s%[2]s) (*%[1]s, error) {\n", m.Name, strings.Join(nonKeyFields, ", "), m.Parent.Name, thisKeyNameAndType)
+	}
+
 	g.Printf("\t_%s_mutex.Lock()\n", m.Name)
 	g.Printf("\tdefer _%s_mutex.Unlock()\n", m.Name)
 
@@ -348,7 +412,9 @@ func (g *Generator) outputAdd(m model, o option) {
 
 	for _, f := range m.Fields {
 		if f.PrimaryKey {
-			if f.ParentKey || f.Typ != "int" || f.Name[len(f.Name)-2:] != "ID" {
+			if f.ParentKey {
+				g.Printf("\t\t%[1]s: m.%[1]s,\n", f.Name)
+			} else if f.Typ != "int" || f.Name[len(f.Name)-2:] != "ID" {
 				g.Printf("\t\t%s: %s,\n", f.Name, f.NameLowerCamel)
 			} else {
 				g.Printf("\t\t%[2]s: _%[1]s_maxRowNo + %[3]d,\n", m.Name, f.Name, o.Initial)
@@ -363,23 +429,70 @@ func (g *Generator) outputAdd(m model, o option) {
 	g.Printf("\t\treturn nil, err\n")
 	g.Printf("\t}\n")
 	g.Printf("\t_%s_maxRowNo++\n", m.Name)
+
+	g.outputParentMap(m)
+
 	g.Printf("\t_%[1]s_cache[%[3]s] = %[2]s\n", m.Name, m.NameLowerCamel, strings.Join(pkNamesWithModelPrefix, "]["))
 	g.Printf("\t_%[1]s_rowNoMap[%[2]s] = _%[1]s_maxRowNo\n", m.Name, strings.Join(pkNamesWithModelPrefix, "]["))
 	g.Printf("\treturn %s, nil\n", m.NameLowerCamel)
 	g.Printf("}\n\n")
+
+	if m.Parent != nil {
+		g.Printf("func Add%[1]s(%[3]s%[4]s%[2]s) (*%[1]s, error) {\n", m.Name, strings.Join(nonKeyFields, ", "), strings.Join(parentKeyNameAndTypes, ""), thisKeyNameAndType)
+		g.outputGetParent(*m.Parent, 0)
+		g.Printf("\treturn m.Add%s(%s)\n", m.Name, strings.Join(nonPkNames, ", "))
+		g.Printf("}\n\n")
+	}
+}
+
+func (g *Generator) outputGetParent(m model, i int) {
+	if m.Parent != nil {
+		g.outputGetParent(*m.Parent, i+1)
+	}
+	pkNames := []string{}
+	for _, f := range m.PrimaryKeys() {
+		pkNames = append(pkNames, f.NameLowerCamel)
+	}
+	if i == 0 {
+		g.Printf("\tm, err := Get%[1]s(%[2]s)\n", m.Name, strings.Join(pkNames, ", "))
+	} else {
+		g.Printf("\tm%[3]d, err := Get%[1]s(%[2]s)\n", m.Name, strings.Join(pkNames, ", "), i)
+	}
+	g.Printf("\tif err != nil {\n")
+	g.Printf("\t\treturn nil, err\n")
+	g.Printf("\t}\n")
 }
 
 func (g *Generator) outputUpdate(m model) {
+	var thisPkName string
 	pkNames := []string{}
+	parentPkNames := []string{}
 	fNameAndTypes := []string{}
+	nonParentKeyFields := []string{}
+	nonPkFields := []string{}
 	for _, f := range m.Fields {
 		if f.PrimaryKey {
+			if f.ParentKey {
+				parentPkNames = append(parentPkNames, "[m."+f.Name+"]")
+			} else {
+				thisPkName = f.NameLowerCamel
+			}
 			pkNames = append(pkNames, f.NameLowerCamel)
+		} else {
+			nonPkFields = append(nonPkFields, f.NameLowerCamel)
+		}
+		if !f.ParentKey {
+			nonParentKeyFields = append(nonParentKeyFields, f.NameLowerCamel+" "+f.Typ)
 		}
 		fNameAndTypes = append(fNameAndTypes, f.NameLowerCamel+" "+f.Typ)
 	}
 
-	g.Printf("func Update%[1]s(%[2]s) (*%[1]s, error) {\n", m.Name, strings.Join(fNameAndTypes, ", "))
+	if m.Parent == nil {
+		g.Printf("func Update%[1]s(%[2]s) (*%[1]s, error) {\n", m.Name, strings.Join(fNameAndTypes, ", "))
+	} else {
+		g.Printf("func (m *%[3]s) Update%[1]s(%[2]s) (*%[1]s, error) {\n", m.Name, strings.Join(nonParentKeyFields, ", "), m.Parent.Name)
+	}
+
 	g.Printf("\t_%s_mutex.Lock()\n", m.Name)
 	g.Printf("\tdefer _%s_mutex.Unlock()\n", m.Name)
 
@@ -397,7 +510,12 @@ func (g *Generator) outputUpdate(m model) {
 		}
 	}
 
-	g.Printf("\t%[2]s, ok := _%[1]s_cache[%[3]s]\n", m.Name, m.NameLowerCamel, strings.Join(pkNames, "]["))
+	if m.Parent != nil {
+		g.Printf("\t%[2]s, ok := _%[1]s_cache%[3]s[%[4]s]\n", m.Name, m.NameLowerCamel, strings.Join(parentPkNames, ""), thisPkName)
+	} else {
+		g.Printf("\t%[2]s, ok := _%[1]s_cache[%[3]s]\n", m.Name, m.NameLowerCamel, strings.Join(pkNames, "]["))
+	}
+
 	g.Printf("\tif !ok {\n")
 	g.Printf("\t\treturn nil, &sheetdb.NotFoundError{Model: \"%s\"}\n", m.Name)
 	g.Printf("\t}\n")
@@ -415,6 +533,13 @@ func (g *Generator) outputUpdate(m model) {
 	g.Printf("\t%[1]s = &%[1]sCopy\n", m.NameLowerCamel)
 	g.Printf("\treturn %s, nil\n", m.NameLowerCamel)
 	g.Printf("}\n\n")
+
+	if m.Parent != nil {
+		g.Printf("func Update%[1]s(%[2]s) (*%[1]s, error) {\n", m.Name, strings.Join(fNameAndTypes, ", "))
+		g.outputGetParent(*m.Parent, 0)
+		g.Printf("\treturn m.Update%s(%s, %s)\n", m.Name, thisPkName, strings.Join(nonPkFields, ", "))
+		g.Printf("}\n\n")
+	}
 }
 
 func (g *Generator) outputDelete(m model) {

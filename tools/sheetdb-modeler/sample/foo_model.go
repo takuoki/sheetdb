@@ -70,13 +70,18 @@ func _Foo_load(data *gsheets.Sheet) error {
 			return err
 		}
 
-		_Foo_maxRowNo++
-		_Foo_cache[userID][fooID] = &Foo{
+		foo := Foo{
 			UserID: userID,
 			FooID:  fooID,
 			Value:  value,
 			Note:   note,
 		}
+
+		_Foo_maxRowNo++
+		if _, ok := _Foo_cache[foo.UserID]; !ok {
+			_Foo_cache[foo.UserID] = map[int]*Foo{}
+		}
+		_Foo_cache[userID][fooID] = &foo
 		_User_rowNoMap[userID] = _User_maxRowNo
 	}
 
@@ -142,14 +147,14 @@ func GetFoos(userID int, opts ...FooQueryOption) ([]*Foo, error) {
 	return foos, nil
 }
 
-func AddFoo(userID int, value float32, note string) (*Foo, error) {
+func (m *User) AddFoo(value float32, note string) (*Foo, error) {
 	_Foo_mutex.Lock()
 	defer _Foo_mutex.Unlock()
 	if err := _Foo_validateNote(note); err != nil {
 		return nil, err
 	}
 	foo := &Foo{
-		UserID: userID,
+		UserID: m.UserID,
 		FooID:  _Foo_maxRowNo + 10001,
 		Value:  value,
 		Note:   note,
@@ -158,18 +163,29 @@ func AddFoo(userID int, value float32, note string) (*Foo, error) {
 		return nil, err
 	}
 	_Foo_maxRowNo++
+	if _, ok := _Foo_cache[foo.UserID]; !ok {
+		_Foo_cache[foo.UserID] = map[int]*Foo{}
+	}
 	_Foo_cache[foo.UserID][foo.FooID] = foo
 	_Foo_rowNoMap[foo.UserID][foo.FooID] = _Foo_maxRowNo
 	return foo, nil
 }
 
-func UpdateFoo(userID int, fooID int, value float32, note string) (*Foo, error) {
+func AddFoo(userID int, value float32, note string) (*Foo, error) {
+	m, err := GetUser(userID)
+	if err != nil {
+		return nil, err
+	}
+	return m.AddFoo(value, note)
+}
+
+func (m *User) UpdateFoo(fooID int, value float32, note string) (*Foo, error) {
 	_Foo_mutex.Lock()
 	defer _Foo_mutex.Unlock()
 	if err := _Foo_validateNote(note); err != nil {
 		return nil, err
 	}
-	foo, ok := _Foo_cache[userID][fooID]
+	foo, ok := _Foo_cache[m.UserID][fooID]
 	if !ok {
 		return nil, &sheetdb.NotFoundError{Model: "Foo"}
 	}
@@ -181,6 +197,14 @@ func UpdateFoo(userID int, fooID int, value float32, note string) (*Foo, error) 
 	}
 	foo = &fooCopy
 	return foo, nil
+}
+
+func UpdateFoo(userID int, fooID int, value float32, note string) (*Foo, error) {
+	m, err := GetUser(userID)
+	if err != nil {
+		return nil, err
+	}
+	return m.UpdateFoo(fooID, value, note)
 }
 
 func DeleteFoo(userID int, fooID int) error {
