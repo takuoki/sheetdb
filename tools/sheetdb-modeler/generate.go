@@ -1,3 +1,6 @@
+
+
+
 package main
 
 import (
@@ -9,13 +12,19 @@ import (
 )
 
 type model struct {
-	Name                 string
-	Fields               []field
-	Parent               *model
-	Children             []model
-	NamePlural           string
-	NameLowerCamel       string
-	NameLowerCamelPlural string
+	Name            string
+	NamePlural      string
+	NameLower       string
+	NameLowerPlural string
+	Fields          []field
+	PkNames         []string
+	PkNameLowers    []string
+	PkTypes         []string
+	NonPkNameLowers      []string
+	ThisKeyName         string
+	ThisKeyNameLower         string
+	Parent          *model
+	Children        []model
 }
 
 type option struct {
@@ -23,19 +32,9 @@ type option struct {
 	Initial    int
 }
 
-func (m model) PrimaryKeys() []field {
-	var ks []field
-	for _, f := range m.Fields {
-		if f.PrimaryKey {
-			ks = append(ks, f)
-		}
-	}
-	return ks
-}
-
 type field struct {
 	Name              string
-	NameLowerCamel    string
+	NameLower         string
 	Typ               string // *sheetdb.Date
 	NonPointerTyp     string // sheetdb.Date
 	TypPackage        string // sheetdb
@@ -45,67 +44,96 @@ type field struct {
 	ParentKey         bool
 	AllowEmpty        bool
 	Unique            bool
-	// TODO: if child, which are parent key
 }
 
 var (
 	sampleUser = model{
-		Name:                 "User",
-		NamePlural:           inflection.Plural("User"),
-		NameLowerCamel:       strcase.ToLowerCamel("User"),
-		NameLowerCamelPlural: inflection.Plural(strcase.ToLowerCamel("User")),
+		Name:            "User",
+		NamePlural:      inflection.Plural("User"),
+		NameLower:       strcase.ToLowerCamel("User"),
+		NameLowerPlural: inflection.Plural(strcase.ToLowerCamel("User")),
+		PkNames:         []string{"UserID"},
+		PkNameLowers:    []string{"userID"},
+		PkTypes:         []string{"int"},
+		NonPkNameLowers:      []string{"name", "email", "sex", "birthday"},
+		ThisKeyName:         "UserID",
+		ThisKeyNameLower: "userID",
 		Fields: []field{
-			{Name: "UserID", NameLowerCamel: "userID", Typ: "int", NonPointerTyp: "int", PrimaryKey: true},
-			{Name: "Name", NameLowerCamel: "name", Typ: "string", NonPointerTyp: "string"},
-			{Name: "Email", NameLowerCamel: "email", Typ: "string", NonPointerTyp: "string", Unique: true},
-			{Name: "Sex", NameLowerCamel: "sex", Typ: "Sex", NonPointerTyp: "Sex"},
-			{Name: "Birthday", NameLowerCamel: "birthday", Typ: "*sheetdb.Date", NonPointerTyp: "sheetdb.Date", TypPackage: "sheetdb", TypWithoutPackage: "Date", PointerTyp: true},
+			{Name: "UserID", NameLower: "userID", Typ: "int", NonPointerTyp: "int", PrimaryKey: true},
+			{Name: "Name", NameLower: "name", Typ: "string", NonPointerTyp: "string"},
+			{Name: "Email", NameLower: "email", Typ: "string", NonPointerTyp: "string", Unique: true},
+			{Name: "Sex", NameLower: "sex", Typ: "Sex", NonPointerTyp: "Sex"},
+			{Name: "Birthday", NameLower: "birthday", Typ: "*sheetdb.Date", NonPointerTyp: "sheetdb.Date", TypPackage: "sheetdb", TypWithoutPackage: "Date", PointerTyp: true},
 		},
 		Children: []model{sampleFoo, sampleBar},
 	}
 
 	sampleFoo = model{
-		Name:                 "Foo",
-		NamePlural:           inflection.Plural("Foo"),
-		NameLowerCamel:       strcase.ToLowerCamel("Foo"),
-		NameLowerCamelPlural: inflection.Plural(strcase.ToLowerCamel("Foo")),
+		Name:            "Foo",
+		NamePlural:      inflection.Plural("Foo"),
+		NameLower:       strcase.ToLowerCamel("Foo"),
+		NameLowerPlural: inflection.Plural(strcase.ToLowerCamel("Foo")),
+		PkNames:         []string{"UserID", "FooID"},
+		PkNameLowers:    []string{"userID", "fooID"},
+		PkTypes:         []string{"int", "int"},
+		NonPkNameLowers:      []string{"value", "note"},		
+		ThisKeyName:         "FooID",
+		ThisKeyNameLower: "fooID",
 		Fields: []field{
-			{Name: "UserID", NameLowerCamel: "userID", Typ: "int", NonPointerTyp: "int", PrimaryKey: true, ParentKey: true},
-			{Name: "FooID", NameLowerCamel: "fooID", Typ: "int", NonPointerTyp: "int", PrimaryKey: true},
-			{Name: "Value", NameLowerCamel: "value", Typ: "float32", NonPointerTyp: "float32"},
-			{Name: "Note", NameLowerCamel: "note", Typ: "string", NonPointerTyp: "string", AllowEmpty: true},
+			{Name: "UserID", NameLower: "userID", Typ: "int", NonPointerTyp: "int", PrimaryKey: true, ParentKey: true},
+			{Name: "FooID", NameLower: "fooID", Typ: "int", NonPointerTyp: "int", PrimaryKey: true},
+			{Name: "Value", NameLower: "value", Typ: "float32", NonPointerTyp: "float32"},
+			{Name: "Note", NameLower: "note", Typ: "string", NonPointerTyp: "string", AllowEmpty: true},
 		},
 		Parent: &model{
-			Name: "User",
-			Fields: []field{
-				{Name: "UserID", NameLowerCamel: "userID", Typ: "int", NonPointerTyp: "int", PrimaryKey: true},
-				{Name: "Name", NameLowerCamel: "name", Typ: "string", NonPointerTyp: "string"},
-				{Name: "Email", NameLowerCamel: "email", Typ: "string", NonPointerTyp: "string", Unique: true},
-				{Name: "Sex", NameLowerCamel: "sex", Typ: "Sex", NonPointerTyp: "Sex"},
-				{Name: "Birthday", NameLowerCamel: "birthday", Typ: "*sheetdb.Date", NonPointerTyp: "sheetdb.Date", TypPackage: "sheetdb", TypWithoutPackage: "Date", PointerTyp: true},
+			Name:         "User",
+			PkNames:      []string{"userID"},
+			PkNameLowers: []string{"userID"},
+			PkTypes:      []string{"int"},
+			NonPkNameLowers:   []string{"name", "email", "sex", "birthday"},
+			ThisKeyName:         "UserID",
+			ThisKeyNameLower: "userID",
+				Fields: []field{
+				{Name: "UserID", NameLower: "userID", Typ: "int", NonPointerTyp: "int", PrimaryKey: true},
+				{Name: "Name", NameLower: "name", Typ: "string", NonPointerTyp: "string"},
+				{Name: "Email", NameLower: "email", Typ: "string", NonPointerTyp: "string", Unique: true},
+				{Name: "Sex", NameLower: "sex", Typ: "Sex", NonPointerTyp: "Sex"},
+				{Name: "Birthday", NameLower: "birthday", Typ: "*sheetdb.Date", NonPointerTyp: "sheetdb.Date", TypPackage: "sheetdb", TypWithoutPackage: "Date", PointerTyp: true},
 			},
 		},
 	}
 
 	sampleBar = model{
-		Name:                 "Bar",
-		NamePlural:           inflection.Plural("Bar"),
-		NameLowerCamel:       strcase.ToLowerCamel("Bar"),
-		NameLowerCamelPlural: inflection.Plural(strcase.ToLowerCamel("Bar")),
+		Name:            "Bar",
+		NamePlural:      inflection.Plural("Bar"),
+		NameLower:       strcase.ToLowerCamel("Bar"),
+		NameLowerPlural: inflection.Plural(strcase.ToLowerCamel("Bar")),
+		PkNames:         []string{"UserID", "Datetime"},
+		PkNameLowers:    []string{"userID", "datetime"},
+		PkTypes:         []string{"int", "sheetdb.Datetime"},
+		NonPkNameLowers:      []string{"value", "note"},
+		ThisKeyName:         "Datetime",
+		ThisKeyNameLower: "datetime",
 		Fields: []field{
-			{Name: "UserID", NameLowerCamel: "userID", Typ: "int", NonPointerTyp: "int", PrimaryKey: true, ParentKey: true},
-			{Name: "Datetime", NameLowerCamel: "datetime", Typ: "sheetdb.Datetime", NonPointerTyp: "sheetdb.Datetime", TypPackage: "sheetdb", TypWithoutPackage: "Datetime", PrimaryKey: true},
-			{Name: "Value", NameLowerCamel: "value", Typ: "float32", NonPointerTyp: "float32"},
-			{Name: "Note", NameLowerCamel: "note", Typ: "string", NonPointerTyp: "string", AllowEmpty: true},
+			{Name: "UserID", NameLower: "userID", Typ: "int", NonPointerTyp: "int", PrimaryKey: true, ParentKey: true},
+			{Name: "Datetime", NameLower: "datetime", Typ: "sheetdb.Datetime", NonPointerTyp: "sheetdb.Datetime", TypPackage: "sheetdb", TypWithoutPackage: "Datetime", PrimaryKey: true},
+			{Name: "Value", NameLower: "value", Typ: "float32", NonPointerTyp: "float32"},
+			{Name: "Note", NameLower: "note", Typ: "string", NonPointerTyp: "string", AllowEmpty: true},
 		},
 		Parent: &model{
-			Name: "User",
-			Fields: []field{
-				{Name: "UserID", NameLowerCamel: "userID", Typ: "int", NonPointerTyp: "int", PrimaryKey: true},
-				{Name: "Name", NameLowerCamel: "name", Typ: "string", NonPointerTyp: "string"},
-				{Name: "Email", NameLowerCamel: "email", Typ: "string", NonPointerTyp: "string", Unique: true},
-				{Name: "Sex", NameLowerCamel: "sex", Typ: "Sex", NonPointerTyp: "Sex"},
-				{Name: "Birthday", NameLowerCamel: "birthday", Typ: "*sheetdb.Date", NonPointerTyp: "sheetdb.Date", TypPackage: "sheetdb", TypWithoutPackage: "Date", PointerTyp: true},
+			Name:         "User",
+			PkNames:      []string{"userID"},
+			PkNameLowers: []string{"userID"},
+			PkTypes:      []string{"int"},
+			NonPkNameLowers:   []string{"name", "email", "sex", "birthday"},
+			ThisKeyName:         "UserID",
+			ThisKeyNameLower: "userID",
+				Fields: []field{
+				{Name: "UserID", NameLower: "userID", Typ: "int", NonPointerTyp: "int", PrimaryKey: true},
+				{Name: "Name", NameLower: "name", Typ: "string", NonPointerTyp: "string"},
+				{Name: "Email", NameLower: "email", Typ: "string", NonPointerTyp: "string", Unique: true},
+				{Name: "Sex", NameLower: "sex", Typ: "Sex", NonPointerTyp: "Sex"},
+				{Name: "Birthday", NameLower: "birthday", Typ: "*sheetdb.Date", NonPointerTyp: "sheetdb.Date", TypPackage: "sheetdb", TypWithoutPackage: "Date", PointerTyp: true},
 			},
 		},
 	}
@@ -166,7 +194,7 @@ func (g *Generator) outputImport(m model) {
 
 func (g *Generator) outputConst(m model) {
 	g.Printf("const (\n")
-	g.Printf("\t_%s_sheetName = \"%s\"\n", m.Name, m.NameLowerCamelPlural)
+	g.Printf("\t_%s_sheetName = \"%s\"\n", m.Name, m.NameLowerPlural)
 	for i, f := range m.Fields {
 		g.Printf("\t_%s_column_%s = %d // %s\n", m.Name, f.Name, i, clmconv.Itoa(i))
 	}
@@ -177,14 +205,10 @@ func (g *Generator) outputConst(m model) {
 
 func (g *Generator) outputVar(m model) {
 	// TODO: comment
-	pkTypes := []string{}
-	for _, f := range m.PrimaryKeys() {
-		pkTypes = append(pkTypes, f.Typ)
-	}
 	g.Printf("var (\n")
 	g.Printf("\t_%s_mutex = sync.RWMutex{}\n", m.Name)
-	g.Printf("\t_%[1]s_cache = map[%[2]s]*%[1]s{}\n", m.Name, strings.Join(pkTypes, "]map["))
-	g.Printf("\t_%s_rowNoMap = map[%s]int{}\n", m.Name, strings.Join(pkTypes, "]map["))
+	g.Printf("\t_%[1]s_cache = map[%[2]s]*%[1]s{}\n", m.Name, strings.Join(m.PkTypes, "]map["))
+	g.Printf("\t_%s_rowNoMap = map[%s]int{}\n", m.Name, strings.Join(m.PkTypes, "]map["))
 	g.Printf("\t_%s_maxRowNo int\n", m.Name)
 	g.Printf(")\n\n")
 }
@@ -196,19 +220,13 @@ func (g *Generator) outputInit(m model, o option) {
 }
 
 func (g *Generator) outputLoad(m model) {
-	pkNames := []string{}
-	pkTypes := []string{}
-	for _, f := range m.PrimaryKeys() {
-		pkNames = append(pkNames, f.NameLowerCamel)
-		pkTypes = append(pkTypes, f.Typ)
-	}
 	g.Printf("func _%s_load(data *gsheets.Sheet) error {\n\n", m.Name)
 
 	g.Printf("\t_%s_mutex.Lock()\n", m.Name)
 	g.Printf("\tdefer _%s_mutex.Unlock()\n\n", m.Name)
 
-	g.Printf("\t_%[1]s_cache = map[%[2]s]*%[1]s{}\n", m.Name, strings.Join(pkTypes, "]map["))
-	g.Printf("\t_%s_rowNoMap = map[%s]int{}\n", m.Name, strings.Join(pkTypes, "]map["))
+	g.Printf("\t_%[1]s_cache = map[%[2]s]*%[1]s{}\n", m.Name, strings.Join(m.PkTypes, "]map["))
+	g.Printf("\t_%s_rowNoMap = map[%s]int{}\n", m.Name, strings.Join(m.PkTypes, "]map["))
 	g.Printf("\t_%s_maxRowNo = 0\n\n", m.Name)
 
 	g.Printf("\tfor i, r := range data.Rows() {\n")
@@ -225,14 +243,14 @@ func (g *Generator) outputLoad(m model) {
 
 	for _, f := range m.Fields {
 		if f.Typ == "string" {
-			g.Printf("\t\t%[3]s := r.Value(_%[1]s_column_%[2]s)\n", m.Name, f.Name, f.NameLowerCamel)
+			g.Printf("\t\t%[3]s := r.Value(_%[1]s_column_%[2]s)\n", m.Name, f.Name, f.NameLower)
 			if f.Unique {
-				g.Printf("\t\tif err := _%[1]s_validate%[2]s(%[3]s, nil); err != nil {\n", m.Name, f.Name, f.NameLowerCamel)
+				g.Printf("\t\tif err := _%[1]s_validate%[2]s(%[3]s, nil); err != nil {\n", m.Name, f.Name, f.NameLower)
 			} else {
-				g.Printf("\t\tif err := _%[1]s_validate%[2]s(%[3]s); err != nil {\n", m.Name, f.Name, f.NameLowerCamel)
+				g.Printf("\t\tif err := _%[1]s_validate%[2]s(%[3]s); err != nil {\n", m.Name, f.Name, f.NameLower)
 			}
 		} else {
-			g.Printf("\t\t%[3]s, err := _%[1]s_parse%[2]s(r.Value(_%[1]s_column_%[2]s))\n", m.Name, f.Name, f.NameLowerCamel)
+			g.Printf("\t\t%[3]s, err := _%[1]s_parse%[2]s(r.Value(_%[1]s_column_%[2]s))\n", m.Name, f.Name, f.NameLower)
 			g.Printf("\t\tif err != nil {\n")
 		}
 		g.Printf("\t\t\treturn err\n")
@@ -240,15 +258,15 @@ func (g *Generator) outputLoad(m model) {
 	}
 	g.Printf("\n")
 
-	g.Printf("\t\t%[2]s := %[1]s{\n", m.Name, m.NameLowerCamel)
+	g.Printf("\t\t%[2]s := %[1]s{\n", m.Name, m.NameLower)
 	for _, f := range m.Fields {
-		g.Printf("\t\t\t%s: %s,\n", f.Name, f.NameLowerCamel)
+		g.Printf("\t\t\t%s: %s,\n", f.Name, f.NameLower)
 	}
 	g.Printf("\t\t}\n\n")
 
 	g.Printf("\t\t_%s_maxRowNo++\n", m.Name)
 	g.outputParentMap(m)
-	g.Printf("\t\t_%[1]s_cache[%[3]s] = &%[2]s\n", m.Name, m.NameLowerCamel, strings.Join(pkNames, "]["))
+	g.Printf("\t\t_%[1]s_cache[%[3]s] = &%[2]s\n", m.Name, m.NameLower, strings.Join(m.PkNameLowers, "]["))
 	g.Printf("\t\t_User_rowNoMap[userID] = _User_maxRowNo\n")
 	g.Printf("\t}\n\n")
 
@@ -257,31 +275,31 @@ func (g *Generator) outputLoad(m model) {
 }
 
 func (g *Generator) outputParentMap(m model) {
-	for i, f := range m.PrimaryKeys() {
-		if !f.ParentKey {
+	for i, f := range m.PkNames {
+		if f == m.ThisKeyName {
 			break
 		}
 		g.Printf("if _, ok := _%s_cache", m.Name)
-		for j, f2 := range m.PrimaryKeys() {
+		for j, f2 := range m.PkNames {
 			if j > i {
 				break
 			}
-			g.Printf("[%s.%s]", m.NameLowerCamel, f2.Name)
+			g.Printf("[%s.%s]", m.NameLower, f2)
 		}
 		g.Printf("; !ok {\n")
 		g.Printf("\t	_%[1]s_cache", m.Name)
-		for j, f2 := range m.PrimaryKeys() {
+		for j, f2 := range m.PkNames {
 			if j > i {
 				break
 			}
-			g.Printf("[%s.%s]", m.NameLowerCamel, f2.Name)
+			g.Printf("[%s.%s]", m.NameLower, f2)
 		}
 		g.Printf(" = map")
-		for j, f2 := range m.PrimaryKeys() {
+		for j, f2 := range m.PkTypes {
 			if j > i {
 				break
 			}
-			g.Printf("[%s]", f2.Typ)
+			g.Printf("[%s]", f2)
 		}
 		g.Printf("*%[1]s{}\n", m.Name)
 		g.Printf("}\n")
@@ -289,16 +307,16 @@ func (g *Generator) outputParentMap(m model) {
 }
 
 func (g *Generator) outputGet(m model) {
-	pkNames := []string{}
 	pkNameAndTypes := []string{}
-	for _, f := range m.PrimaryKeys() {
-		pkNames = append(pkNames, f.NameLowerCamel)
-		pkNameAndTypes = append(pkNameAndTypes, f.NameLowerCamel+" "+f.Typ)
+	for _, f := range m.Fields {
+		if f.PrimaryKey {
+			pkNameAndTypes = append(pkNameAndTypes, f.NameLower+" "+f.Typ)
+		}
 	}
 	g.Printf("func Get%[1]s(%[2]s) (*%[1]s, error) {\n", m.Name, strings.Join(pkNameAndTypes, ", "))
 	g.Printf("\t_%s_mutex.RLock()\n", m.Name)
 	g.Printf("\tdefer _%s_mutex.RUnlock()\n", m.Name)
-	g.Printf("\tif v, ok := _%s_cache[%s]; ok {\n", m.Name, strings.Join(pkNames, "]["))
+	g.Printf("\tif v, ok := _%s_cache[%s]; ok {\n", m.Name, strings.Join(m.PkNameLowers, "]["))
 	g.Printf("\t\treturn v, nil\n")
 	g.Printf("\t}\n")
 	g.Printf("\treturn nil, &sheetdb.NotFoundError{Model: \"%s\"}\n", m.Name)
@@ -308,20 +326,20 @@ func (g *Generator) outputGet(m model) {
 func (g *Generator) outputGetList(m model) {
 	parentKeys := []string{}
 	parentKeyAndTypes := []string{}
-	for _, f := range m.PrimaryKeys() {
+	for _, f := range m.Fields {
 		if f.ParentKey {
-			parentKeys = append(parentKeys, "["+f.NameLowerCamel+"]")
-			parentKeyAndTypes = append(parentKeyAndTypes, f.NameLowerCamel+" "+f.Typ+", ")
+			parentKeys = append(parentKeys, "["+f.NameLower+"]")
+			parentKeyAndTypes = append(parentKeyAndTypes, f.NameLower+" "+f.Typ+", ")
 		}
 	}
 	g.Printf("type %sQuery struct {\n", m.Name)
-	g.Printf("\tfilter func(%[2]s *%[1]s) bool\n", m.Name, m.NameLowerCamel)
-	g.Printf("\tsort   func(%[2]s []*%[1]s)\n", m.Name, m.NameLowerCamelPlural)
+	g.Printf("\tfilter func(%[2]s *%[1]s) bool\n", m.Name, m.NameLower)
+	g.Printf("\tsort   func(%[2]s []*%[1]s)\n", m.Name, m.NameLowerPlural)
 	g.Printf("}\n\n")
 
 	g.Printf("type %[1]sQueryOption func(query *%[1]sQuery) *%[1]sQuery\n\n", m.Name)
 
-	g.Printf("func %[1]sFilter(filterFunc func(%[2]s *%[1]s) bool) func(query *%[1]sQuery) *%[1]sQuery {\n", m.Name, m.NameLowerCamel)
+	g.Printf("func %[1]sFilter(filterFunc func(%[2]s *%[1]s) bool) func(query *%[1]sQuery) *%[1]sQuery {\n", m.Name, m.NameLower)
 	g.Printf("\treturn func(query *%[1]sQuery) *%[1]sQuery {\n", m.Name)
 	g.Printf("\t\tif query != nil {\n")
 	g.Printf("\t\t\tquery.filter = filterFunc\n")
@@ -330,7 +348,7 @@ func (g *Generator) outputGetList(m model) {
 	g.Printf("\t}\n")
 	g.Printf("}\n\n")
 
-	g.Printf("func %[1]sSort(sortFunc func(%[2]s []*%[1]s)) func(query *%[1]sQuery) *%[1]sQuery {\n", m.Name, m.NameLowerCamelPlural)
+	g.Printf("func %[1]sSort(sortFunc func(%[2]s []*%[1]s)) func(query *%[1]sQuery) *%[1]sQuery {\n", m.Name, m.NameLowerPlural)
 	g.Printf("\treturn func(query *%[1]sQuery) *%[1]sQuery {\n", m.Name)
 	g.Printf("\t\tif query != nil {\n")
 	g.Printf("\t\t\tquery.sort = sortFunc\n")
@@ -340,48 +358,46 @@ func (g *Generator) outputGetList(m model) {
 	g.Printf("}\n\n")
 
 	g.Printf("func Get%[2]s(%[3]sopts ...%[1]sQueryOption) ([]*%[1]s, error) {\n", m.Name, m.NamePlural, strings.Join(parentKeyAndTypes, ""))
-	g.Printf("\t%[2]sQuery := &%[1]sQuery{}\n", m.Name, m.NameLowerCamel)
+	g.Printf("\t%[2]sQuery := &%[1]sQuery{}\n", m.Name, m.NameLower)
 	g.Printf("\tfor _, opt := range opts {\n")
-	g.Printf("\t\t%[1]sQuery = opt(%[1]sQuery)\n", m.NameLowerCamel)
+	g.Printf("\t\t%[1]sQuery = opt(%[1]sQuery)\n", m.NameLower)
 	g.Printf("\t}\n")
 	g.Printf("\t_%s_mutex.RLock()\n", m.Name)
 	g.Printf("\tdefer _%s_mutex.RUnlock()\n", m.Name)
-	g.Printf("\t%[2]s := []*%[1]s{}\n", m.Name, m.NameLowerCamelPlural)
-	g.Printf("\tif %sQuery.filter != nil {\n", m.NameLowerCamel)
+	g.Printf("\t%[2]s := []*%[1]s{}\n", m.Name, m.NameLowerPlural)
+	g.Printf("\tif %sQuery.filter != nil {\n", m.NameLower)
 	g.Printf("\t\tfor _, v := range _%s_cache%s {\n", m.Name, strings.Join(parentKeys, ""))
-	g.Printf("\t\t\tif %sQuery.filter(v) {\n", m.NameLowerCamel)
-	g.Printf("\t\t\t\t%[1]s = append(%[1]s, v)\n", m.NameLowerCamelPlural)
+	g.Printf("\t\t\tif %sQuery.filter(v) {\n", m.NameLower)
+	g.Printf("\t\t\t\t%[1]s = append(%[1]s, v)\n", m.NameLowerPlural)
 	g.Printf("\t\t\t}\n")
 	g.Printf("\t\t}\n")
 	g.Printf("\t} else {\n")
 	g.Printf("\t\tfor _, v := range _%s_cache%s {\n", m.Name, strings.Join(parentKeys, ""))
-	g.Printf("\t\t\t%[1]s = append(%[1]s, v)\n", m.NameLowerCamelPlural)
+	g.Printf("\t\t\t%[1]s = append(%[1]s, v)\n", m.NameLowerPlural)
 	g.Printf("\t\t}\n")
 	g.Printf("\t}\n")
-	g.Printf("\tif %sQuery.sort != nil {\n", m.NameLowerCamel)
-	g.Printf("\t\t%sQuery.sort(%s)\n", m.NameLowerCamel, m.NameLowerCamelPlural)
+	g.Printf("\tif %sQuery.sort != nil {\n", m.NameLower)
+	g.Printf("\t\t%sQuery.sort(%s)\n", m.NameLower, m.NameLowerPlural)
 	g.Printf("\t}\n")
-	g.Printf("\treturn %s, nil\n", m.NameLowerCamelPlural)
+	g.Printf("\treturn %s, nil\n", m.NameLowerPlural)
 	g.Printf("}\n\n")
 }
 
 func (g *Generator) outputAdd(m model, o option) {
 	pkNamesWithModelPrefix := []string{}
 	nonKeyFields := []string{}
-	nonPkNames := []string{}
 	parentKeyNameAndTypes := []string{}
 	var thisKeyNameAndType string
 	for _, f := range m.Fields {
 		if f.PrimaryKey {
-			pkNamesWithModelPrefix = append(pkNamesWithModelPrefix, m.NameLowerCamel+"."+f.Name)
+			pkNamesWithModelPrefix = append(pkNamesWithModelPrefix, m.NameLower+"."+f.Name)
 			if f.ParentKey {
-				parentKeyNameAndTypes = append(parentKeyNameAndTypes, f.NameLowerCamel+" "+f.Typ+", ")
+				parentKeyNameAndTypes = append(parentKeyNameAndTypes, f.NameLower+" "+f.Typ+", ")
 			} else if f.Typ != "int" || f.Name[len(f.Name)-2:] != "ID" {
-				thisKeyNameAndType = f.NameLowerCamel + " " + f.Typ + ", "
+				thisKeyNameAndType = f.NameLower + " " + f.Typ + ", "
 			}
 		} else {
-			nonPkNames = append(nonPkNames, f.NameLowerCamel)
-			nonKeyFields = append(nonKeyFields, f.NameLowerCamel+" "+f.Typ)
+			nonKeyFields = append(nonKeyFields, f.NameLower+" "+f.Typ)
 		}
 	}
 
@@ -397,50 +413,50 @@ func (g *Generator) outputAdd(m model, o option) {
 	for _, f := range m.Fields {
 		if !f.PrimaryKey && f.Typ == "string" {
 			if f.Unique {
-				g.Printf("\tif err := _%[1]s_validate%[2]s(%[3]s, nil); err != nil {\n", m.Name, f.Name, f.NameLowerCamel)
+				g.Printf("\tif err := _%[1]s_validate%[2]s(%[3]s, nil); err != nil {\n", m.Name, f.Name, f.NameLower)
 				g.Printf("\t\treturn nil, err\n")
 				g.Printf("\t}\n")
 			} else {
-				g.Printf("\tif err := _%[1]s_validate%[2]s(%[3]s); err != nil {\n", m.Name, f.Name, f.NameLowerCamel)
+				g.Printf("\tif err := _%[1]s_validate%[2]s(%[3]s); err != nil {\n", m.Name, f.Name, f.NameLower)
 				g.Printf("\t\treturn nil, err\n")
 				g.Printf("\t}\n")
 			}
 		}
 	}
 
-	g.Printf("\t%[2]s := &%[1]s{\n", m.Name, m.NameLowerCamel)
+	g.Printf("\t%[2]s := &%[1]s{\n", m.Name, m.NameLower)
 
 	for _, f := range m.Fields {
 		if f.PrimaryKey {
 			if f.ParentKey {
 				g.Printf("\t\t%[1]s: m.%[1]s,\n", f.Name)
 			} else if f.Typ != "int" || f.Name[len(f.Name)-2:] != "ID" {
-				g.Printf("\t\t%s: %s,\n", f.Name, f.NameLowerCamel)
+				g.Printf("\t\t%s: %s,\n", f.Name, f.NameLower)
 			} else {
 				g.Printf("\t\t%[2]s: _%[1]s_maxRowNo + %[3]d,\n", m.Name, f.Name, o.Initial)
 			}
 		} else {
-			g.Printf("\t\t%s: %s,\n", f.Name, f.NameLowerCamel)
+			g.Printf("\t\t%s: %s,\n", f.Name, f.NameLower)
 		}
 	}
 
 	g.Printf("\t}\n")
-	g.Printf("\tif err := %s._asyncUpdate(); err != nil {\n", m.NameLowerCamel)
+	g.Printf("\tif err := %s._asyncUpdate(); err != nil {\n", m.NameLower)
 	g.Printf("\t\treturn nil, err\n")
 	g.Printf("\t}\n")
 	g.Printf("\t_%s_maxRowNo++\n", m.Name)
 
 	g.outputParentMap(m)
 
-	g.Printf("\t_%[1]s_cache[%[3]s] = %[2]s\n", m.Name, m.NameLowerCamel, strings.Join(pkNamesWithModelPrefix, "]["))
+	g.Printf("\t_%[1]s_cache[%[3]s] = %[2]s\n", m.Name, m.NameLower, strings.Join(pkNamesWithModelPrefix, "]["))
 	g.Printf("\t_%[1]s_rowNoMap[%[2]s] = _%[1]s_maxRowNo\n", m.Name, strings.Join(pkNamesWithModelPrefix, "]["))
-	g.Printf("\treturn %s, nil\n", m.NameLowerCamel)
+	g.Printf("\treturn %s, nil\n", m.NameLower)
 	g.Printf("}\n\n")
 
 	if m.Parent != nil {
 		g.Printf("func Add%[1]s(%[3]s%[4]s%[2]s) (*%[1]s, error) {\n", m.Name, strings.Join(nonKeyFields, ", "), strings.Join(parentKeyNameAndTypes, ""), thisKeyNameAndType)
 		g.outputGetParent(*m.Parent, 0)
-		g.Printf("\treturn m.Add%s(%s)\n", m.Name, strings.Join(nonPkNames, ", "))
+		g.Printf("\treturn m.Add%s(%s)\n", m.Name, strings.Join(m.NonPkNameLowers, ", "))
 		g.Printf("}\n\n")
 	}
 }
@@ -449,14 +465,10 @@ func (g *Generator) outputGetParent(m model, i int) {
 	if m.Parent != nil {
 		g.outputGetParent(*m.Parent, i+1)
 	}
-	pkNames := []string{}
-	for _, f := range m.PrimaryKeys() {
-		pkNames = append(pkNames, f.NameLowerCamel)
-	}
 	if i == 0 {
-		g.Printf("\tm, err := Get%[1]s(%[2]s)\n", m.Name, strings.Join(pkNames, ", "))
+		g.Printf("\tm, err := Get%[1]s(%[2]s)\n", m.Name, strings.Join(m.PkNames, ", "))
 	} else {
-		g.Printf("\tm%[3]d, err := Get%[1]s(%[2]s)\n", m.Name, strings.Join(pkNames, ", "), i)
+		g.Printf("\tm%[3]d, err := Get%[1]s(%[2]s)\n", m.Name, strings.Join(m.PkNames, ", "), i)
 	}
 	g.Printf("\tif err != nil {\n")
 	g.Printf("\t\treturn nil, err\n")
@@ -464,27 +476,19 @@ func (g *Generator) outputGetParent(m model, i int) {
 }
 
 func (g *Generator) outputUpdate(m model) {
-	var thisPkName string
-	pkNames := []string{}
 	parentPkNames := []string{}
 	fNameAndTypes := []string{}
 	nonParentKeyFields := []string{}
-	nonPkFields := []string{}
 	for _, f := range m.Fields {
 		if f.PrimaryKey {
 			if f.ParentKey {
 				parentPkNames = append(parentPkNames, "[m."+f.Name+"]")
-			} else {
-				thisPkName = f.NameLowerCamel
 			}
-			pkNames = append(pkNames, f.NameLowerCamel)
-		} else {
-			nonPkFields = append(nonPkFields, f.NameLowerCamel)
 		}
 		if !f.ParentKey {
-			nonParentKeyFields = append(nonParentKeyFields, f.NameLowerCamel+" "+f.Typ)
+			nonParentKeyFields = append(nonParentKeyFields, f.NameLower+" "+f.Typ)
 		}
-		fNameAndTypes = append(fNameAndTypes, f.NameLowerCamel+" "+f.Typ)
+		fNameAndTypes = append(fNameAndTypes, f.NameLower+" "+f.Typ)
 	}
 
 	if m.Parent == nil {
@@ -499,11 +503,11 @@ func (g *Generator) outputUpdate(m model) {
 	for _, f := range m.Fields {
 		if !f.PrimaryKey && f.Typ == "string" {
 			if f.Unique {
-				g.Printf("\tif err := _%[1]s_validate%[2]s(%[3]s, &%[4]s); err != nil {\n", m.Name, f.Name, f.NameLowerCamel, strings.Join(pkNames, ", &"))
+				g.Printf("\tif err := _%[1]s_validate%[2]s(%[3]s, &%[4]s); err != nil {\n", m.Name, f.Name, f.NameLower, strings.Join(m.PkNameLowers, ", &"))
 				g.Printf("\t\treturn nil, err\n")
 				g.Printf("\t}\n")
 			} else {
-				g.Printf("\tif err := _%[1]s_validate%[2]s(%[3]s); err != nil {\n", m.Name, f.Name, f.NameLowerCamel)
+				g.Printf("\tif err := _%[1]s_validate%[2]s(%[3]s); err != nil {\n", m.Name, f.Name, f.NameLower)
 				g.Printf("\t\treturn nil, err\n")
 				g.Printf("\t}\n")
 			}
@@ -511,47 +515,47 @@ func (g *Generator) outputUpdate(m model) {
 	}
 
 	if m.Parent != nil {
-		g.Printf("\t%[2]s, ok := _%[1]s_cache%[3]s[%[4]s]\n", m.Name, m.NameLowerCamel, strings.Join(parentPkNames, ""), thisPkName)
+		g.Printf("\t%[2]s, ok := _%[1]s_cache%[3]s[%[4]s]\n", m.Name, m.NameLower, strings.Join(parentPkNames, ""), m.ThisKeyNameLower)
 	} else {
-		g.Printf("\t%[2]s, ok := _%[1]s_cache[%[3]s]\n", m.Name, m.NameLowerCamel, strings.Join(pkNames, "]["))
+		g.Printf("\t%[2]s, ok := _%[1]s_cache[%[3]s]\n", m.Name, m.NameLower, strings.Join(m.PkNameLowers, "]["))
 	}
 
 	g.Printf("\tif !ok {\n")
 	g.Printf("\t\treturn nil, &sheetdb.NotFoundError{Model: \"%s\"}\n", m.Name)
 	g.Printf("\t}\n")
-	g.Printf("\t%[1]sCopy := *%[1]s\n", m.NameLowerCamel)
+	g.Printf("\t%[1]sCopy := *%[1]s\n", m.NameLower)
 
 	for _, f := range m.Fields {
 		if !f.PrimaryKey {
-			g.Printf("\t%sCopy.%s = %s\n", m.NameLowerCamel, f.Name, f.NameLowerCamel)
+			g.Printf("\t%sCopy.%s = %s\n", m.NameLower, f.Name, f.NameLower)
 		}
 	}
 
-	g.Printf("\tif err := (&%sCopy)._asyncUpdate(); err != nil {\n", m.NameLowerCamel)
+	g.Printf("\tif err := (&%sCopy)._asyncUpdate(); err != nil {\n", m.NameLower)
 	g.Printf("\t\treturn nil, err\n")
 	g.Printf("\t}\n")
-	g.Printf("\t%[1]s = &%[1]sCopy\n", m.NameLowerCamel)
-	g.Printf("\treturn %s, nil\n", m.NameLowerCamel)
+	g.Printf("\t%[1]s = &%[1]sCopy\n", m.NameLower)
+	g.Printf("\treturn %s, nil\n", m.NameLower)
 	g.Printf("}\n\n")
 
 	if m.Parent != nil {
 		g.Printf("func Update%[1]s(%[2]s) (*%[1]s, error) {\n", m.Name, strings.Join(fNameAndTypes, ", "))
 		g.outputGetParent(*m.Parent, 0)
-		g.Printf("\treturn m.Update%s(%s, %s)\n", m.Name, thisPkName, strings.Join(nonPkFields, ", "))
+		g.Printf("\treturn m.Update%s(%s, %s)\n", m.Name, m.ThisKeyNameLower, strings.Join(m.NonPkNameLowers, ", "))
 		g.Printf("}\n\n")
 	}
 }
 
 func (g *Generator) outputDelete(m model) {
-	pkNames := []string{}
 	pkNameAndTypes := []string{}
-	for _, f := range m.PrimaryKeys() {
-		pkNames = append(pkNames, f.NameLowerCamel)
-		pkNameAndTypes = append(pkNameAndTypes, f.NameLowerCamel+" "+f.Typ)
+	for _, f := range m.Fields {
+		if f.PrimaryKey {
+			pkNameAndTypes = append(pkNameAndTypes, f.NameLower+" "+f.Typ)
+		}
 	}
 	childNames := []string{}
 	for _, v := range m.Children {
-		childNames = append(childNames, v.NameLowerCamelPlural)
+		childNames = append(childNames, v.NameLowerPlural)
 	}
 
 	g.Printf("func Delete%s(%s) error {\n", m.Name, strings.Join(pkNameAndTypes, ", "))
@@ -563,31 +567,32 @@ func (g *Generator) outputDelete(m model) {
 		g.Printf("\tdefer _%s_mutex.Unlock()\n", child.Name)
 	}
 
-	g.Printf("\t%[2]s, ok := _%[1]s_cache[%[3]s]\n", m.Name, m.NameLowerCamel, strings.Join(pkNames, "]["))
+	g.Printf("\t%[2]s, ok := _%[1]s_cache[%[3]s]\n", m.Name, m.NameLower, strings.Join(m.PkNameLowers, "]["))
 	g.Printf("\tif !ok {\n")
 	g.Printf("\t\treturn &sheetdb.NotFoundError{Model: \"%s\"}\n", m.Name)
 	g.Printf("\t}\n")
 
 	for _, child := range m.Children {
-		g.Printf("\tvar %[2]s []*%[1]s\n", child.Name, child.NameLowerCamelPlural)
-		g.Printf("\tfor _, v := range _%s_cache[%s] {\n", child.Name, strings.Join(pkNames, "]["))
-		g.Printf("\t\t%[1]s = append(%[1]s, v)\n", child.NameLowerCamelPlural)
+		g.Printf("\tvar %[2]s []*%[1]s\n", child.Name, child.NameLowerPlural)
+		g.Printf("\tfor _, v := range _%s_cache[%s] {\n", child.Name, strings.Join(m.PkNameLowers, "]["))
+		g.Printf("\t\t%[1]s = append(%[1]s, v)\n", child.NameLowerPlural)
 		g.Printf("\t}\n")
 	}
 
-	g.Printf("\tif err := %s._asyncDelete(%s); err != nil {\n", m.NameLowerCamel, strings.Join(childNames, ", "))
+	g.Printf("\tif err := %s._asyncDelete(%s); err != nil {\n", m.NameLower, strings.Join(childNames, ", "))
 	g.Printf("\t\treturn err\n")
 	g.Printf("\t}\n")
 
 	if m.Parent == nil {
-		g.Printf("\tdelete(_%[1]s_cache, %[2]s)\n", m.Name, pkNames[0])
+		g.Printf("\tdelete(_%[1]s_cache, %[2]s)\n", m.Name, m.PkNameLowers[0])
 	} else {
 		// TODO
-		g.Printf("\tdelete(_%[1]s_cache, %[2]s)\n", m.Name, pkNames[0])
+		g.Printf("\tdelete(_%[1]s_cache, %[2]s)\n", m.Name, m.PkNameLowers[0])
 	}
 
 	for _, child := range m.Children {
-		g.Printf("\tdelete(_%s_cache, %s)\n", child.Name, strings.Join(pkNames, ", "))
+		// TODO
+		g.Printf("\tdelete(_%s_cache, %s)\n", child.Name, strings.Join(m.PkNameLowers, ", "))
 	}
 
 	g.Printf("\treturn nil\n")
@@ -595,34 +600,34 @@ func (g *Generator) outputDelete(m model) {
 }
 
 func (g *Generator) outputValidate(m model) {
-	pkNames := []string{}
 	pkNameAndTypes := []string{}
 	pkEqualConditions := []string{}
-	for _, f := range m.PrimaryKeys() {
-		pkNames = append(pkNames, f.NameLowerCamel)
-		pkNameAndTypes = append(pkNameAndTypes, f.NameLowerCamel+" *"+f.Typ)
-		pkEqualConditions = append(pkEqualConditions, "v."+f.Name+" == *"+f.NameLowerCamel)
+	for _, f := range m.Fields {
+		if f.PrimaryKey {
+			pkNameAndTypes = append(pkNameAndTypes, f.NameLower+" *"+f.Typ)
+			pkEqualConditions = append(pkEqualConditions, "v."+f.Name+" == *"+f.NameLower)
+		}
 	}
 	for _, f := range m.Fields {
 		if f.Typ != "string" {
 			continue
 		}
 		if f.Unique {
-			g.Printf("func _%[1]s_validate%[2]s(%[3]s string, %[4]s) error {\n", m.Name, f.Name, f.NameLowerCamel, strings.Join(pkNameAndTypes, ", "))
+			g.Printf("func _%[1]s_validate%[2]s(%[3]s string, %[4]s) error {\n", m.Name, f.Name, f.NameLower, strings.Join(pkNameAndTypes, ", "))
 		} else {
-			g.Printf("func _%[1]s_validate%[2]s(%[3]s string) error {\n", m.Name, f.Name, f.NameLowerCamel)
+			g.Printf("func _%[1]s_validate%[2]s(%[3]s string) error {\n", m.Name, f.Name, f.NameLower)
 		}
 
 		if !f.AllowEmpty {
-			g.Printf("\tif %s == \"\" {\n", f.NameLowerCamel)
+			g.Printf("\tif %s == \"\" {\n", f.NameLower)
 			g.Printf("\t\treturn &sheetdb.EmptyStringError{FieldName: \"%s\"}\n", f.Name)
 			g.Printf("\t}\n")
 		}
 
 		if f.Unique {
-			g.Printf("\tif %s == nil {\n", strings.Join(pkNames, " == nil || "))
+			g.Printf("\tif %s == nil {\n", strings.Join(m.PkNameLowers, " == nil || "))
 			g.Printf("\t\tfor _, v := range _%s_cache {\n", m.Name)
-			g.Printf("\t\t\tif %[2]s == v.%[1]s {\n", f.Name, f.NameLowerCamel)
+			g.Printf("\t\t\tif %[2]s == v.%[1]s {\n", f.Name, f.NameLower)
 			g.Printf("\t\t\t\treturn &sheetdb.DuplicationError{FieldName: \"%s\"}\n", f.Name)
 			g.Printf("\t\t\t}\n")
 			g.Printf("\t\t}\n")
@@ -631,7 +636,7 @@ func (g *Generator) outputValidate(m model) {
 			g.Printf("\t\t\tif %s {\n", strings.Join(pkEqualConditions, " && "))
 			g.Printf("\t\t\t\tcontinue\n")
 			g.Printf("\t\t\t}\n")
-			g.Printf("\t\t\tif %[2]s == v.%[1]s {\n", f.Name, f.NameLowerCamel)
+			g.Printf("\t\t\tif %[2]s == v.%[1]s {\n", f.Name, f.NameLower)
 			g.Printf("\t\t\t\treturn &sheetdb.DuplicationError{FieldName: \"%s\"}\n", f.Name)
 			g.Printf("\t\t\t}\n")
 			g.Printf("\t\t}\n")
@@ -649,23 +654,23 @@ func (g *Generator) outputParse(m model) {
 		if f.Typ == "string" {
 			continue
 		}
-		g.Printf("func _%s_parse%s(%s string) (%s, error) {\n", m.Name, f.Name, f.NameLowerCamel, f.Typ)
+		g.Printf("func _%s_parse%s(%s string) (%s, error) {\n", m.Name, f.Name, f.NameLower, f.Typ)
 
 		if f.PointerTyp {
 			g.Printf("\tvar val %s\n", f.Typ)
-			g.Printf("\tif %s != \"\" {\n", f.NameLowerCamel)
+			g.Printf("\tif %s != \"\" {\n", f.NameLower)
 		}
 
 		switch f.Typ {
 		case "int":
-			g.Printf("\tv, err := strconv.Atoi(%s)\n", f.NameLowerCamel)
+			g.Printf("\tv, err := strconv.Atoi(%s)\n", f.NameLower)
 		case "float32":
-			g.Printf("\tv, err := strconv.ParseFloat(%s, 32)\n", f.NameLowerCamel)
+			g.Printf("\tv, err := strconv.ParseFloat(%s, 32)\n", f.NameLower)
 		default:
 			if f.TypPackage == "" {
-				g.Printf("\tv, err := New%s(%s)\n", f.NonPointerTyp, f.NameLowerCamel)
+				g.Printf("\tv, err := New%s(%s)\n", f.NonPointerTyp, f.NameLower)
 			} else {
-				g.Printf("\tv, err := %s.New%s(%s)\n", f.TypPackage, f.TypWithoutPackage, f.NameLowerCamel)
+				g.Printf("\tv, err := %s.New%s(%s)\n", f.TypPackage, f.TypWithoutPackage, f.NameLower)
 			}
 		}
 
@@ -691,17 +696,17 @@ func (g *Generator) outputParse(m model) {
 }
 
 func (g *Generator) outputAsync(m model, o option) {
-	pkNames := []string{}
-	for _, f := range m.PrimaryKeys() {
-		pkNames = append(pkNames, "m."+f.Name)
+	pkNamesWithM := []string{}
+	for _, f := range m.PkNames {
+		pkNamesWithM = append(pkNamesWithM, "m."+f)
 	}
 	childNames := []string{}
 	childPkNames := [][]string{}
 	for _, child := range m.Children {
-		childNames = append(childNames, child.NameLowerCamelPlural+" []*"+child.Name)
+		childNames = append(childNames, child.NameLowerPlural+" []*"+child.Name)
 		a := []string{}
-		for _, f := range child.PrimaryKeys() {
-			a = append(a, "v."+f.Name)
+		for _, f := range child.PkNames {
+			a = append(a, "v."+f)
 		}
 		childPkNames = append(childPkNames, a)
 	}
@@ -710,7 +715,7 @@ func (g *Generator) outputAsync(m model, o option) {
 	g.Printf("\tdata := []gsheets.UpdateValue{\n")
 	g.Printf("\t\t{\n")
 	g.Printf("\t\t\tSheetName: _%s_sheetName,\n", m.Name)
-	g.Printf("\t\t\tRowNo:     _%[1]s_rowNoMap[%[2]s],\n", m.Name, strings.Join(pkNames, "]["))
+	g.Printf("\t\t\tRowNo:     _%[1]s_rowNoMap[%[2]s],\n", m.Name, strings.Join(pkNamesWithM, "]["))
 	g.Printf("\t\t\tValues: []interface{}{\n")
 
 	for _, f := range m.Fields {
@@ -735,7 +740,7 @@ func (g *Generator) outputAsync(m model, o option) {
 	g.Printf("\tdata := []gsheets.UpdateValue{\n")
 	g.Printf("\t\t{\n")
 	g.Printf("\t\t\tSheetName: _%s_sheetName,\n", m.Name)
-	g.Printf("\t\t\tRowNo:     _%[1]s_rowNoMap[%[2]s],\n", m.Name, strings.Join(pkNames, "]["))
+	g.Printf("\t\t\tRowNo:     _%[1]s_rowNoMap[%[2]s],\n", m.Name, strings.Join(pkNamesWithM, "]["))
 	g.Printf("\t\t\tValues: []interface{}{\n")
 
 	for _, f := range m.Fields {
@@ -754,7 +759,7 @@ func (g *Generator) outputAsync(m model, o option) {
 	g.Printf("\t}\n")
 
 	for i, child := range m.Children {
-		g.Printf("\tfor _, v := range %s {\n", child.NameLowerCamelPlural)
+		g.Printf("\tfor _, v := range %s {\n", child.NameLowerPlural)
 		g.Printf("\t\tdata = append(data, gsheets.UpdateValue{\n")
 		g.Printf("\t\t\tSheetName: _%s_sheetName,\n", child.Name)
 		g.Printf("\t\t\tRowNo:     _%s_rowNoMap[%s],\n", child.Name, strings.Join(childPkNames[i], "]["))

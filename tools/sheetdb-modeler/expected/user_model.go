@@ -73,14 +73,16 @@ func _User_load(data *gsheets.Sheet) error {
 			return err
 		}
 
-		_User_maxRowNo++
-		_User_cache[userID] = &User{
+		user := User{
 			UserID:   userID,
 			Name:     name,
 			Email:    email,
 			Sex:      sex,
 			Birthday: birthday,
 		}
+
+		_User_maxRowNo++
+		_User_cache[userID] = &user
 		_User_rowNoMap[userID] = _User_maxRowNo
 	}
 
