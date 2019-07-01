@@ -215,7 +215,7 @@ func (m *User) DeleteFoo(fooID int) error {
 	if err := foo._asyncDelete(); err != nil {
 		return err
 	}
-	delete(_Foo_cache, m.UserID)
+	delete(_Foo_cache[m.UserID], fooID)
 	return nil
 }
 

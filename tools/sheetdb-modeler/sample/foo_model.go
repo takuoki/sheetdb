@@ -207,18 +207,26 @@ func UpdateFoo(userID int, fooID int, value float32, note string) (*Foo, error) 
 	return m.UpdateFoo(fooID, value, note)
 }
 
-func DeleteFoo(userID int, fooID int) error {
+func (m *User) DeleteFoo(fooID int) error {
 	_Foo_mutex.Lock()
 	defer _Foo_mutex.Unlock()
-	foo, ok := _Foo_cache[userID][fooID]
+	foo, ok := _Foo_cache[m.UserID][fooID]
 	if !ok {
 		return &sheetdb.NotFoundError{Model: "Foo"}
 	}
 	if err := foo._asyncDelete(); err != nil {
 		return err
 	}
-	delete(_Foo_cache, userID)
+	delete(_Foo_cache[m.UserID], fooID)
 	return nil
+}
+
+func DeleteFoo(userID int, fooID int) error {
+	m, err := GetUser(userID)
+	if err != nil {
+		return err
+	}
+	return m.DeleteFoo(fooID)
 }
 
 func _Foo_validateNote(note string) error {

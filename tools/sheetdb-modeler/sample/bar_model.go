@@ -70,13 +70,18 @@ func _Bar_load(data *gsheets.Sheet) error {
 			return err
 		}
 
-		_Bar_maxRowNo++
-		_Bar_cache[userID][datetime] = &Bar{
+		bar := Bar{
 			UserID:   userID,
 			Datetime: datetime,
 			Value:    value,
 			Note:     note,
 		}
+
+		_Bar_maxRowNo++
+		if _, ok := _Bar_cache[bar.UserID]; !ok {
+			_Bar_cache[bar.UserID] = map[sheetdb.Datetime]*Bar{}
+		}
+		_Bar_cache[userID][datetime] = &bar
 		_User_rowNoMap[userID] = _User_maxRowNo
 	}
 
@@ -142,14 +147,14 @@ func GetBars(userID int, opts ...BarQueryOption) ([]*Bar, error) {
 	return bars, nil
 }
 
-func AddBar(userID int, datetime sheetdb.Datetime, value float32, note string) (*Bar, error) {
+func (m *User) AddBar(datetime sheetdb.Datetime, value float32, note string) (*Bar, error) {
 	_Bar_mutex.Lock()
 	defer _Bar_mutex.Unlock()
 	if err := _Bar_validateNote(note); err != nil {
 		return nil, err
 	}
 	bar := &Bar{
-		UserID:   userID,
+		UserID:   m.UserID,
 		Datetime: datetime,
 		Value:    value,
 		Note:     note,
@@ -158,18 +163,29 @@ func AddBar(userID int, datetime sheetdb.Datetime, value float32, note string) (
 		return nil, err
 	}
 	_Bar_maxRowNo++
+	if _, ok := _Bar_cache[bar.UserID]; !ok {
+		_Bar_cache[bar.UserID] = map[sheetdb.Datetime]*Bar{}
+	}
 	_Bar_cache[bar.UserID][bar.Datetime] = bar
 	_Bar_rowNoMap[bar.UserID][bar.Datetime] = _Bar_maxRowNo
 	return bar, nil
 }
 
-func UpdateBar(userID int, datetime sheetdb.Datetime, value float32, note string) (*Bar, error) {
+func AddBar(userID int, datetime sheetdb.Datetime, value float32, note string) (*Bar, error) {
+	m, err := GetUser(userID)
+	if err != nil {
+		return nil, err
+	}
+	return m.AddBar(datetime, value, note)
+}
+
+func (m *User) UpdateBar(datetime sheetdb.Datetime, value float32, note string) (*Bar, error) {
 	_Bar_mutex.Lock()
 	defer _Bar_mutex.Unlock()
 	if err := _Bar_validateNote(note); err != nil {
 		return nil, err
 	}
-	bar, ok := _Bar_cache[userID][datetime]
+	bar, ok := _Bar_cache[m.UserID][datetime]
 	if !ok {
 		return nil, &sheetdb.NotFoundError{Model: "Bar"}
 	}
@@ -183,18 +199,34 @@ func UpdateBar(userID int, datetime sheetdb.Datetime, value float32, note string
 	return bar, nil
 }
 
-func DeleteBar(userID int, datetime sheetdb.Datetime) error {
+func UpdateBar(userID int, datetime sheetdb.Datetime, value float32, note string) (*Bar, error) {
+	m, err := GetUser(userID)
+	if err != nil {
+		return nil, err
+	}
+	return m.UpdateBar(datetime, value, note)
+}
+
+func (m *User) DeleteBar(datetime sheetdb.Datetime) error {
 	_Bar_mutex.Lock()
 	defer _Bar_mutex.Unlock()
-	bar, ok := _Bar_cache[userID][datetime]
+	bar, ok := _Bar_cache[m.UserID][datetime]
 	if !ok {
 		return &sheetdb.NotFoundError{Model: "Bar"}
 	}
 	if err := bar._asyncDelete(); err != nil {
 		return err
 	}
-	delete(_Bar_cache, userID)
+	delete(_Bar_cache[m.UserID], datetime)
 	return nil
+}
+
+func DeleteBar(userID int, datetime sheetdb.Datetime) error {
+	m, err := GetUser(userID)
+	if err != nil {
+		return err
+	}
+	return m.DeleteBar(datetime)
 }
 
 func _Bar_validateNote(note string) error {
