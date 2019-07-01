@@ -1,6 +1,10 @@
 package main
 
 import (
+	"go/ast"
+	"log"
+	"strings"
+
 	"github.com/iancoleman/strcase"
 	"github.com/jinzhu/inflection"
 )
@@ -36,151 +40,206 @@ type option struct {
 }
 
 type field struct {
-	Name              string
-	NameLower         string
-	Typ               string // *sheetdb.Date
-	NonPointerTyp     string // sheetdb.Date
-	TypPackage        string // sheetdb
-	TypWithoutPackage string // Date
-	PointerTyp        bool
-	PrimaryKey        bool
-	ParentKey         bool
-	AllowEmpty        bool
-	Unique            bool
+	Name          string
+	NameLower     string
+	Typ           string // *sheetdb.Date
+	TypNonPointer string // sheetdb.Date
+	Package       string // sheetdb
+	TypRaw        string // Date
+	IsPointer     bool
+	IsPk          bool
+	IsParentKey   bool
+	AllowEmpty    bool
+	Unique        bool
 }
 
-var (
-	sampleUser = model{
-		Name:             "User",
-		NamePlural:       inflection.Plural("User"),
-		NameLower:        strcase.ToLowerCamel("User"),
-		NameLowerPlural:  inflection.Plural(strcase.ToLowerCamel("User")),
-		PkNames:          []string{"UserID"},
-		PkNameLowers:     []string{"userID"},
-		PkTypes:          []string{"int"},
-		NonPkNameLowers:  []string{"name", "email", "sex", "birthday"},
-		NonPkTypes:       []string{"string", "string", "Sex", "*sheetdb.Date"},
-		FieldNames:       []string{"UserID", "Name", "Email", "Sex", "Birthday"},
-		FieldNameLowers:  []string{"userID", "name", "email", "sex", "birthday"},
-		FieldTypes:       []string{"int", "string", "string", "Sex", "*sheetdb.Date"},
-		ThisKeyName:      "UserID",
-		ThisKeyNameLower: "userID",
-		ThisKeyType:      "int",
-		Fields: []field{
-			{Name: "UserID", NameLower: "userID", Typ: "int", NonPointerTyp: "int", PrimaryKey: true},
-			{Name: "Name", NameLower: "name", Typ: "string", NonPointerTyp: "string"},
-			{Name: "Email", NameLower: "email", Typ: "string", NonPointerTyp: "string", Unique: true},
-			{Name: "Sex", NameLower: "sex", Typ: "Sex", NonPointerTyp: "Sex"},
-			{Name: "Birthday", NameLower: "birthday", Typ: "*sheetdb.Date", NonPointerTyp: "sheetdb.Date", TypPackage: "sheetdb", TypWithoutPackage: "Date", PointerTyp: true},
-		},
-		Children:                 []model{sampleFoo, sampleBar},
-		ChildrenNames:            []string{"Foo", "Bar"},
-		ChildrenNamePlurals:      []string{"Foos", "Bars"},
-		ChildrenNameLowers:       []string{"foo", "bar"},
-		ChildrenNameLowerPlurals: []string{"foos", "bars"},
+func (g *Generator) generate(typeName, parentName, childrenNames, clientName string, initialNum int) {
+	s := search{
+		Typ:    typeName,
+		Parent: parentName,
+	}
+	for _, c := range strings.Split(childrenNames, ",") {
+		if c != "" {
+			s.Children = append(s.Children, c)
+		}
+	}
+	for _, f := range g.pkg.files {
+		if f.file != nil {
+			ast.Inspect(f.file, s.searchType)
+			ast.Inspect(f.file, s.searchParent)
+			ast.Inspect(f.file, s.searchChildren)
+		}
+	}
+	if s.Model == nil {
+		log.Fatalf("unable to find specified type. (type=%s)", typeName)
+	}
+	if parentName != "" && s.ParentModel == nil {
+		log.Fatalf("unable to find specified parent type. (type=%s)", parentName)
+	}
+	if len(s.Children) != len(s.ChildrenModels) {
+		log.Fatal("unable to find some specified children types.")
 	}
 
-	sampleFoo = model{
-		Name:             "Foo",
-		NamePlural:       inflection.Plural("Foo"),
-		NameLower:        strcase.ToLowerCamel("Foo"),
-		NameLowerPlural:  inflection.Plural(strcase.ToLowerCamel("Foo")),
-		PkNames:          []string{"UserID", "FooID"},
-		PkNameLowers:     []string{"userID", "fooID"},
-		PkTypes:          []string{"int", "int"},
-		NonPkNameLowers:  []string{"value", "note"},
-		NonPkTypes:       []string{"float32", "string"},
-		FieldNames:       []string{"UserID", "FooID", "Value", "Note"},
-		FieldNameLowers:  []string{"userID", "fooID", "value", "note"},
-		FieldTypes:       []string{"int", "int", "float32", "string"},
-		ThisKeyName:      "FooID",
-		ThisKeyNameLower: "fooID",
-		ThisKeyType:      "int",
-		Fields: []field{
-			{Name: "UserID", NameLower: "userID", Typ: "int", NonPointerTyp: "int", PrimaryKey: true, ParentKey: true},
-			{Name: "FooID", NameLower: "fooID", Typ: "int", NonPointerTyp: "int", PrimaryKey: true},
-			{Name: "Value", NameLower: "value", Typ: "float32", NonPointerTyp: "float32"},
-			{Name: "Note", NameLower: "note", Typ: "string", NonPointerTyp: "string", AllowEmpty: true},
-		},
-		Parent: &model{
-			Name:             "User",
-			PkNames:          []string{"UserID"},
-			PkNameLowers:     []string{"userID"},
-			PkTypes:          []string{"int"},
-			NonPkNameLowers:  []string{"name", "email", "sex", "birthday"},
-			NonPkTypes:       []string{"string", "string", "Sex", "*sheetdb.Date"},
-			FieldNames:       []string{"UserID", "Name", "Email", "Sex", "Birthday"},
-			FieldNameLowers:  []string{"userID", "name", "email", "sex", "birthday"},
-			FieldTypes:       []string{"int", "string", "string", "Sex", "*sheetdb.Date"},
-			ThisKeyName:      "UserID",
-			ThisKeyNameLower: "userID",
-			ThisKeyType:      "int",
-			Fields: []field{
-				{Name: "UserID", NameLower: "userID", Typ: "int", NonPointerTyp: "int", PrimaryKey: true},
-				{Name: "Name", NameLower: "name", Typ: "string", NonPointerTyp: "string"},
-				{Name: "Email", NameLower: "email", Typ: "string", NonPointerTyp: "string", Unique: true},
-				{Name: "Sex", NameLower: "sex", Typ: "Sex", NonPointerTyp: "Sex"},
-				{Name: "Birthday", NameLower: "birthday", Typ: "*sheetdb.Date", NonPointerTyp: "sheetdb.Date", TypPackage: "sheetdb", TypWithoutPackage: "Date", PointerTyp: true},
-			},
-		},
+	s.Model.Parent = s.ParentModel
+	s.Model.Children = s.ChildrenModels
+	s.Model.ChildrenNames = s.Children
+	for _, c := range s.Children {
+		s.Model.ChildrenNamePlurals = append(s.Model.ChildrenNamePlurals, inflection.Plural(c))
+		s.Model.ChildrenNameLowers = append(s.Model.ChildrenNameLowers, strcase.ToLowerCamel(c))
+		s.Model.ChildrenNameLowerPlurals = append(s.Model.ChildrenNameLowerPlurals, inflection.Plural(strcase.ToLowerCamel(c)))
 	}
 
-	sampleBar = model{
-		Name:             "Bar",
-		NamePlural:       inflection.Plural("Bar"),
-		NameLower:        strcase.ToLowerCamel("Bar"),
-		NameLowerPlural:  inflection.Plural(strcase.ToLowerCamel("Bar")),
-		PkNames:          []string{"UserID", "Datetime"},
-		PkNameLowers:     []string{"userID", "datetime"},
-		PkTypes:          []string{"int", "sheetdb.Datetime"},
-		NonPkNameLowers:  []string{"value", "note"},
-		NonPkTypes:       []string{"float32", "string"},
-		FieldNames:       []string{"UserID", "Datetime", "Value", "Note"},
-		FieldNameLowers:  []string{"userID", "datetime", "value", "note"},
-		FieldTypes:       []string{"int", "sheetdb.Datetime", "float32", "string"},
-		ThisKeyName:      "Datetime",
-		ThisKeyNameLower: "datetime",
-		ThisKeyType:      "sheetdb.Datetime",
-		Fields: []field{
-			{Name: "UserID", NameLower: "userID", Typ: "int", NonPointerTyp: "int", PrimaryKey: true, ParentKey: true},
-			{Name: "Datetime", NameLower: "datetime", Typ: "sheetdb.Datetime", NonPointerTyp: "sheetdb.Datetime", TypPackage: "sheetdb", TypWithoutPackage: "Datetime", PrimaryKey: true},
-			{Name: "Value", NameLower: "value", Typ: "float32", NonPointerTyp: "float32"},
-			{Name: "Note", NameLower: "note", Typ: "string", NonPointerTyp: "string", AllowEmpty: true},
-		},
-		Parent: &model{
-			Name:             "User",
-			PkNames:          []string{"UserID"},
-			PkNameLowers:     []string{"userID"},
-			PkTypes:          []string{"int"},
-			NonPkNameLowers:  []string{"name", "email", "sex", "birthday"},
-			NonPkTypes:       []string{"string", "string", "Sex", "*sheetdb.Date"},
-			FieldNames:       []string{"UserID", "Name", "Email", "Sex", "Birthday"},
-			FieldNameLowers:  []string{"userID", "name", "email", "sex", "birthday"},
-			FieldTypes:       []string{"int", "string", "string", "Sex", "*sheetdb.Date"},
-			ThisKeyName:      "UserID",
-			ThisKeyNameLower: "userID",
-			ThisKeyType:      "int",
-			Fields: []field{
-				{Name: "UserID", NameLower: "userID", Typ: "int", NonPointerTyp: "int", PrimaryKey: true},
-				{Name: "Name", NameLower: "name", Typ: "string", NonPointerTyp: "string"},
-				{Name: "Email", NameLower: "email", Typ: "string", NonPointerTyp: "string", Unique: true},
-				{Name: "Sex", NameLower: "sex", Typ: "Sex", NonPointerTyp: "Sex"},
-				{Name: "Birthday", NameLower: "birthday", Typ: "*sheetdb.Date", NonPointerTyp: "sheetdb.Date", TypPackage: "sheetdb", TypWithoutPackage: "Date", PointerTyp: true},
-			},
-		},
-	}
-)
+	// TODO: validation
 
-func (g *Generator) generate(typeName string) {
-	m := sampleUser
-	switch typeName {
-	case "Foo":
-		m = sampleFoo
-	case "Bar":
-		m = sampleBar
-	}
-	g.output(m, option{
-		ClientName: "dbClient",
-		Initial:    10001,
+	g.output(*s.Model, option{
+		ClientName: clientName,
+		Initial:    initialNum,
 	})
+}
+
+type search struct {
+	Typ      string
+	Parent   string
+	Children []string
+
+	Model          *model
+	ParentModel    *model
+	ChildrenModels []model
+}
+
+func (s *search) searchType(node ast.Node) bool {
+	typ, ok := node.(*ast.TypeSpec)
+	if !ok || typ.Name.Name != s.Typ {
+		return true
+	}
+	s.Model = s.buildModel(typ)
+	return false
+}
+
+func (s *search) searchParent(node ast.Node) bool {
+	typ, ok := node.(*ast.TypeSpec)
+	if !ok || typ.Name.Name != s.Parent {
+		return true
+	}
+	s.ParentModel = s.buildModel(typ)
+	return false
+}
+
+func (s *search) searchChildren(node ast.Node) bool {
+	typ, ok := node.(*ast.TypeSpec)
+	if !ok {
+		return true
+	}
+	ok = false
+	for _, c := range s.Children {
+		if typ.Name.Name == c {
+			ok = true
+			break
+		}
+	}
+	if !ok {
+		return true
+	}
+	s.ChildrenModels = append(s.ChildrenModels, *(s.buildModel(typ)))
+	return false
+}
+
+func (s *search) buildModel(typ *ast.TypeSpec) *model {
+
+	m := model{
+		Name:            typ.Name.Name,
+		NamePlural:      inflection.Plural(typ.Name.Name),
+		NameLower:       strcase.ToLowerCamel(typ.Name.Name),
+		NameLowerPlural: inflection.Plural(strcase.ToLowerCamel(typ.Name.Name)),
+	}
+
+	st, ok := typ.Type.(*ast.StructType)
+	if !ok {
+		log.Fatalf("specified type is not struct type. (type=%s)", typ.Name.Name)
+	}
+
+	for _, f := range st.Fields.List {
+		if len(f.Names) != 1 {
+			log.Fatalf("specify one field per line. (type=%s, fields=%v)", typ.Name.Name, f.Names)
+		}
+		f2 := field{
+			Name:      f.Names[0].Name,
+			NameLower: strcase.ToLowerCamel(f.Names[0].Name),
+		}
+		m.FieldNames = append(m.FieldNames, f2.Name)
+		m.FieldNameLowers = append(m.FieldNameLowers, f2.NameLower)
+
+		// set type related fields
+		switch ft := f.Type.(type) {
+		case *ast.Ident:
+			f2.Typ = ft.Name
+			f2.TypNonPointer = ft.Name
+			f2.TypRaw = ft.Name
+		case *ast.SelectorExpr:
+			x, ok := ft.X.(*ast.Ident)
+			if !ok {
+				log.Fatalf("package name is invalid. (type=%s, field=%s)", typ.Name.Name, f.Names[0].Name)
+			}
+			f2.Typ = x.Name + "." + ft.Sel.Name
+			f2.TypNonPointer = x.Name + "." + ft.Sel.Name
+			f2.Package = x.Name
+			f2.TypRaw = ft.Sel.Name
+		case *ast.StarExpr:
+			f2.IsPointer = true
+			switch x := ft.X.(type) {
+			case *ast.Ident:
+				f2.Typ = "*" + x.Name
+				f2.TypNonPointer = x.Name
+				f2.TypRaw = x.Name
+			case *ast.SelectorExpr:
+				x2, ok := x.X.(*ast.Ident)
+				if !ok {
+					log.Fatalf("package name is invalid. (type=%s, field=%s)", typ.Name.Name, f.Names[0].Name)
+				}
+				f2.Typ = "*" + x2.Name + "." + x.Sel.Name
+				f2.TypNonPointer = x2.Name + "." + x.Sel.Name
+				f2.Package = x2.Name
+				f2.TypRaw = x.Sel.Name
+			default:
+				log.Fatalf("currently, this field type is unsupported. (type=%s, field=%s)", typ.Name.Name, f.Names[0].Name)
+			}
+		default:
+			log.Fatalf("currently, this field type is unsupported. (type=%s, field=%s)", typ.Name.Name, f.Names[0].Name)
+		}
+		m.FieldTypes = append(m.FieldTypes, f2.Typ)
+
+		// set tag related fields
+		if f.Tag.Value != "" {
+			for _, tag := range strings.Split(f.Tag.Value[1:len(f.Tag.Value)-1], ",") {
+				switch tag {
+				case "primary":
+					f2.IsPk = true
+					m.PkNames = append(m.PkNames, f2.Name)
+					m.PkNameLowers = append(m.PkNameLowers, f2.NameLower)
+					m.PkTypes = append(m.PkTypes, f2.Typ)
+					// the last primary key is "this" key
+					m.ThisKeyName = f2.Name
+					m.ThisKeyNameLower = f2.NameLower
+					m.ThisKeyType = f2.Typ
+				case "allowempty":
+					f2.AllowEmpty = true
+				case "unique":
+					f2.Unique = true
+				}
+			}
+		}
+		if !f2.IsPk {
+			m.NonPkNameLowers = append(m.NonPkNameLowers, f2.NameLower)
+			m.NonPkTypes = append(m.NonPkTypes, f2.Typ)
+		}
+
+		m.Fields = append(m.Fields, f2)
+	}
+	for i := 0; i < len(m.Fields); i++ {
+		if m.Fields[i].Name != m.ThisKeyName {
+			m.Fields[i].IsParentKey = true
+		}
+	}
+
+	return &m
 }

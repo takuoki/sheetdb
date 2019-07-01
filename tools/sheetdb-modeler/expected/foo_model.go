@@ -153,7 +153,7 @@ func (m *User) AddFoo(value float32, note string) (*Foo, error) {
 	}
 	foo := &Foo{
 		UserID: m.UserID,
-		FooID:  _Foo_maxRowNo + 10001,
+		FooID:  _Foo_maxRowNo + 1,
 		Value:  value,
 		Note:   note,
 	}

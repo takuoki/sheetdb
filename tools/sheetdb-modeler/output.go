@@ -259,7 +259,7 @@ func (g *Generator) outputAdd(m model, o option) {
 	g.Printf("\tdefer _%s_mutex.Unlock()\n", m.Name)
 
 	for _, f := range m.Fields {
-		if !f.PrimaryKey && f.Typ == "string" {
+		if !f.IsPk && f.Typ == "string" {
 			if f.Unique {
 				g.Printf("\tif err := _%[1]s_validate%[2]s(%[3]s, nil); err != nil {\n", m.Name, f.Name, f.NameLower)
 				g.Printf("\t\treturn nil, err\n")
@@ -275,13 +275,13 @@ func (g *Generator) outputAdd(m model, o option) {
 	g.Printf("\t%[2]s := &%[1]s{\n", m.Name, m.NameLower)
 
 	for _, f := range m.Fields {
-		if f.PrimaryKey {
-			if f.ParentKey {
+		if f.IsPk {
+			if f.IsParentKey {
 				g.Printf("\t\t%[1]s: m.%[1]s,\n", f.Name)
 			} else if autoNumbering(f.Name, f.Typ) {
-				g.Printf("\t\t%s: %s,\n", f.Name, f.NameLower)
-			} else {
 				g.Printf("\t\t%[2]s: _%[1]s_maxRowNo + %[3]d,\n", m.Name, f.Name, o.Initial)
+			} else {
+				g.Printf("\t\t%s: %s,\n", f.Name, f.NameLower)
 			}
 		} else {
 			g.Printf("\t\t%s: %s,\n", f.Name, f.NameLower)
@@ -347,7 +347,7 @@ func (g *Generator) outputUpdate(m model) {
 	g.Printf("\tdefer _%s_mutex.Unlock()\n", m.Name)
 
 	for _, f := range m.Fields {
-		if !f.PrimaryKey && f.Typ == "string" {
+		if !f.IsPk && f.Typ == "string" {
 			if f.Unique {
 				g.Printf("\tif err := _%[1]s_validate%[2]s(%[3]s, &%[4]s); err != nil {\n", m.Name, f.Name, f.NameLower, strings.Join(m.PkNameLowers, ", &"))
 				g.Printf("\t\treturn nil, err\n")
@@ -372,7 +372,7 @@ func (g *Generator) outputUpdate(m model) {
 	g.Printf("\t%[1]sCopy := *%[1]s\n", m.NameLower)
 
 	for _, f := range m.Fields {
-		if !f.PrimaryKey {
+		if !f.IsPk {
 			g.Printf("\t%sCopy.%s = %s\n", m.NameLower, f.Name, f.NameLower)
 		}
 	}
@@ -459,7 +459,7 @@ func (g *Generator) outputValidate(m model) {
 	pkNameAndTypes := []string{}
 	pkEqualConditions := []string{}
 	for _, f := range m.Fields {
-		if f.PrimaryKey {
+		if f.IsPk {
 			pkNameAndTypes = append(pkNameAndTypes, f.NameLower+" *"+f.Typ)
 			pkEqualConditions = append(pkEqualConditions, "v."+f.Name+" == *"+f.NameLower)
 		}
@@ -512,7 +512,7 @@ func (g *Generator) outputParse(m model) {
 		}
 		g.Printf("func _%s_parse%s(%s string) (%s, error) {\n", m.Name, f.Name, f.NameLower, f.Typ)
 
-		if f.PointerTyp {
+		if f.IsPointer {
 			g.Printf("\tvar val %s\n", f.Typ)
 			g.Printf("\tif %s != \"\" {\n", f.NameLower)
 		}
@@ -523,10 +523,10 @@ func (g *Generator) outputParse(m model) {
 		case "float32":
 			g.Printf("\tv, err := strconv.ParseFloat(%s, 32)\n", f.NameLower)
 		default:
-			if f.TypPackage == "" {
-				g.Printf("\tv, err := New%s(%s)\n", f.NonPointerTyp, f.NameLower)
+			if f.Package == "" {
+				g.Printf("\tv, err := New%s(%s)\n", f.TypNonPointer, f.NameLower)
 			} else {
-				g.Printf("\tv, err := %s.New%s(%s)\n", f.TypPackage, f.TypWithoutPackage, f.NameLower)
+				g.Printf("\tv, err := %s.New%s(%s)\n", f.Package, f.TypRaw, f.NameLower)
 			}
 		}
 
@@ -534,7 +534,7 @@ func (g *Generator) outputParse(m model) {
 		g.Printf("\t\treturn %[2]s, &sheetdb.InvalidValueError{FieldName: \"%[1]s\", Err: err}\n", f.Name, nilValue(f.Typ))
 		g.Printf("\t}\n")
 
-		if f.PointerTyp {
+		if f.IsPointer {
 			g.Printf("\t\tval = &v\n")
 			g.Printf("\t}\n")
 			g.Printf("\treturn val, nil\n")
