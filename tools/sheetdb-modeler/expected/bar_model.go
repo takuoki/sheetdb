@@ -82,7 +82,7 @@ func _Bar_load(data *gsheets.Sheet) error {
 			_Bar_cache[bar.UserID] = map[sheetdb.Datetime]*Bar{}
 		}
 		_Bar_cache[userID][datetime] = &bar
-		_User_rowNoMap[userID] = _User_maxRowNo
+		_Bar_rowNoMap[userID][datetime] = _Bar_maxRowNo
 	}
 
 	return nil

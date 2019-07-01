@@ -80,7 +80,7 @@ func _Foo_load(data *gsheets.Sheet) error {
 			_Foo_cache[foo.UserID] = map[int]*Foo{}
 		}
 		_Foo_cache[userID][fooID] = &foo
-		_User_rowNoMap[userID] = _User_maxRowNo
+		_Foo_rowNoMap[userID][fooID] = _Foo_maxRowNo
 	}
 
 	return nil

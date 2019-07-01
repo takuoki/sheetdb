@@ -120,7 +120,7 @@ func (g *Generator) outputLoad(m model) {
 	g.Printf("\t\t_%s_maxRowNo++\n", m.Name)
 	g.outputParentMap(m)
 	g.Printf("\t\t_%[1]s_cache[%[3]s] = &%[2]s\n", m.Name, m.NameLower, strings.Join(m.PkNameLowers, "]["))
-	g.Printf("\t\t_User_rowNoMap[userID] = _User_maxRowNo\n")
+	g.Printf("\t\t_%[1]s_rowNoMap[%[2]s] = _%[1]s_maxRowNo\n", m.Name, strings.Join(m.PkNameLowers, "]["))
 	g.Printf("\t}\n\n")
 
 	g.Printf("\treturn nil\n")
@@ -242,13 +242,13 @@ func (g *Generator) outputGetList(m model) {
 func (g *Generator) outputAdd(m model, o option) {
 
 	if m.Parent == nil {
-		if m.ThisKeyType == "int" && m.ThisKeyName[len(m.ThisKeyName)-2:] == "ID" {
+		if autoNumbering(m.ThisKeyName, m.ThisKeyType) {
 			g.Printf("func Add%[1]s(%[2]s) (*%[1]s, error) {\n", m.Name, join(m.NonPkNameLowers, m.NonPkTypes, " ", ", "))
 		} else {
 			g.Printf("func Add%[1]s(%[2]s %[3]s, %[4]s) (*%[1]s, error) {\n", m.Name, m.ThisKeyNameLower, m.ThisKeyType, join(m.NonPkNameLowers, m.NonPkTypes, " ", ", "))
 		}
 	} else {
-		if m.ThisKeyType == "int" && m.ThisKeyName[len(m.ThisKeyName)-2:] == "ID" {
+		if autoNumbering(m.ThisKeyName, m.ThisKeyType) {
 			g.Printf("func (m *%[2]s) Add%[1]s(%[3]s) (*%[1]s, error) {\n", m.Name, m.Parent.Name, join(m.NonPkNameLowers, m.NonPkTypes, " ", ", "))
 		} else {
 			g.Printf("func (m *%[4]s) Add%[1]s(%[2]s %[3]s, %[5]s) (*%[1]s, error) {\n", m.Name, m.ThisKeyNameLower, m.ThisKeyType, m.Parent.Name, join(m.NonPkNameLowers, m.NonPkTypes, " ", ", "))
@@ -278,7 +278,7 @@ func (g *Generator) outputAdd(m model, o option) {
 		if f.PrimaryKey {
 			if f.ParentKey {
 				g.Printf("\t\t%[1]s: m.%[1]s,\n", f.Name)
-			} else if f.Typ != "int" || f.Name[len(f.Name)-2:] != "ID" {
+			} else if autoNumbering(f.Name, f.Typ) {
 				g.Printf("\t\t%s: %s,\n", f.Name, f.NameLower)
 			} else {
 				g.Printf("\t\t%[2]s: _%[1]s_maxRowNo + %[3]d,\n", m.Name, f.Name, o.Initial)
@@ -296,19 +296,19 @@ func (g *Generator) outputAdd(m model, o option) {
 
 	g.outputParentMap(m)
 
-	g.Printf("\t_%[1]s_cache[%[3]s] = %[2]s\n", m.Name, m.NameLower, strings.Join(xxxfixes(m.PkNames, m.NameLower+".", ""), "]["))
-	g.Printf("\t_%[1]s_rowNoMap[%[2]s] = _%[1]s_maxRowNo\n", m.Name, strings.Join(xxxfixes(m.PkNames, m.NameLower+".", ""), "]["))
+	g.Printf("\t_%[1]s_cache[%[3]s] = %[2]s\n", m.Name, m.NameLower, strings.Join(prefixes(m.PkNames, m.NameLower+"."), "]["))
+	g.Printf("\t_%[1]s_rowNoMap[%[2]s] = _%[1]s_maxRowNo\n", m.Name, strings.Join(prefixes(m.PkNames, m.NameLower+"."), "]["))
 	g.Printf("\treturn %s, nil\n", m.NameLower)
 	g.Printf("}\n\n")
 
 	if m.Parent != nil {
-		if m.ThisKeyType == "int" && m.ThisKeyName[len(m.ThisKeyName)-2:] == "ID" {
+		if autoNumbering(m.ThisKeyName, m.ThisKeyType) {
 			g.Printf("func Add%[1]s(%[2]s, %[3]s) (*%[1]s, error) {\n", m.Name, join(m.Parent.PkNameLowers, m.Parent.PkTypes, " ", ", "), join(m.NonPkNameLowers, m.NonPkTypes, " ", ", "))
 		} else {
 			g.Printf("func Add%[1]s(%[2]s) (*%[1]s, error) {\n", m.Name, join(m.FieldNameLowers, m.FieldTypes, " ", ", "))
 		}
 		g.outputGetParent(*m.Parent, true, 0)
-		if m.ThisKeyType == "int" && m.ThisKeyName[len(m.ThisKeyName)-2:] == "ID" {
+		if autoNumbering(m.ThisKeyName, m.ThisKeyType) {
 			g.Printf("\treturn m.Add%s(%s)\n", m.Name, strings.Join(m.NonPkNameLowers, ", "))
 		} else {
 			g.Printf("\treturn m.Add%s(%s, %s)\n", m.Name, m.ThisKeyNameLower, strings.Join(m.NonPkNameLowers, ", "))
@@ -363,7 +363,7 @@ func (g *Generator) outputUpdate(m model) {
 	if m.Parent == nil {
 		g.Printf("\t%[2]s, ok := _%[1]s_cache[%[3]s]\n", m.Name, m.NameLower, strings.Join(m.PkNameLowers, "]["))
 	} else {
-		g.Printf("\t%[2]s, ok := _%[1]s_cache[%[3]s][%[4]s]\n", m.Name, m.NameLower, strings.Join(xxxfixes(m.Parent.PkNames, "m.", ""), "]["), m.ThisKeyNameLower)
+		g.Printf("\t%[2]s, ok := _%[1]s_cache[%[3]s][%[4]s]\n", m.Name, m.NameLower, strings.Join(prefixes(m.Parent.PkNames, "m."), "]["), m.ThisKeyNameLower)
 	}
 
 	g.Printf("\tif !ok {\n")
@@ -411,7 +411,7 @@ func (g *Generator) outputDelete(m model) {
 	if m.Parent == nil {
 		g.Printf("\t%[2]s, ok := _%[1]s_cache[%[3]s]\n", m.Name, m.NameLower, m.ThisKeyNameLower)
 	} else {
-		g.Printf("\t%[2]s, ok := _%[1]s_cache[%[3]s][%[4]s]\n", m.Name, m.NameLower, strings.Join(xxxfixes(m.Parent.PkNames, "m.", ""), "]["), m.ThisKeyNameLower)
+		g.Printf("\t%[2]s, ok := _%[1]s_cache[%[3]s][%[4]s]\n", m.Name, m.NameLower, strings.Join(prefixes(m.Parent.PkNames, "m."), "]["), m.ThisKeyNameLower)
 	}
 
 	g.Printf("\tif !ok {\n")
@@ -432,14 +432,14 @@ func (g *Generator) outputDelete(m model) {
 	if m.Parent == nil {
 		g.Printf("\tdelete(_%[1]s_cache, %[2]s)\n", m.Name, m.ThisKeyNameLower)
 	} else {
-		g.Printf("\tdelete(_%[1]s_cache[%[3]s], %[2]s)\n", m.Name, m.ThisKeyNameLower, strings.Join(xxxfixes(m.Parent.PkNames, "m.", ""), "]["))
+		g.Printf("\tdelete(_%[1]s_cache[%[3]s], %[2]s)\n", m.Name, m.ThisKeyNameLower, strings.Join(prefixes(m.Parent.PkNames, "m."), "]["))
 	}
 
 	for _, child := range m.Children {
 		if m.Parent == nil {
 			g.Printf("\tdelete(_%[1]s_cache, %[2]s)\n", child.Name, m.ThisKeyNameLower)
 		} else {
-			g.Printf("\tdelete(_%[1]s_cache[%[3]s], %[2]s)\n", child.Name, m.ThisKeyNameLower, strings.Join(xxxfixes(m.Parent.PkNames, "m.", ""), "]["))
+			g.Printf("\tdelete(_%[1]s_cache[%[3]s], %[2]s)\n", child.Name, m.ThisKeyNameLower, strings.Join(prefixes(m.Parent.PkNames, "m."), "]["))
 		}
 	}
 
@@ -557,7 +557,7 @@ func (g *Generator) outputAsync(m model, o option) {
 	g.Printf("\tdata := []gsheets.UpdateValue{\n")
 	g.Printf("\t\t{\n")
 	g.Printf("\t\t\tSheetName: _%s_sheetName,\n", m.Name)
-	g.Printf("\t\t\tRowNo:     _%[1]s_rowNoMap[%[2]s],\n", m.Name, strings.Join(xxxfixes(m.PkNames, "m.", ""), "]["))
+	g.Printf("\t\t\tRowNo:     _%[1]s_rowNoMap[%[2]s],\n", m.Name, strings.Join(prefixes(m.PkNames, "m."), "]["))
 	g.Printf("\t\t\tValues: []interface{}{\n")
 
 	for _, f := range m.Fields {
@@ -582,7 +582,7 @@ func (g *Generator) outputAsync(m model, o option) {
 	g.Printf("\tdata := []gsheets.UpdateValue{\n")
 	g.Printf("\t\t{\n")
 	g.Printf("\t\t\tSheetName: _%s_sheetName,\n", m.Name)
-	g.Printf("\t\t\tRowNo:     _%[1]s_rowNoMap[%[2]s],\n", m.Name, strings.Join(xxxfixes(m.PkNames, "m.", ""), "]["))
+	g.Printf("\t\t\tRowNo:     _%[1]s_rowNoMap[%[2]s],\n", m.Name, strings.Join(prefixes(m.PkNames, "m."), "]["))
 	g.Printf("\t\t\tValues: []interface{}{\n")
 
 	for _, f := range m.Fields {
@@ -604,7 +604,7 @@ func (g *Generator) outputAsync(m model, o option) {
 		g.Printf("\tfor _, v := range %s {\n", child.NameLowerPlural)
 		g.Printf("\t\tdata = append(data, gsheets.UpdateValue{\n")
 		g.Printf("\t\t\tSheetName: _%s_sheetName,\n", child.Name)
-		g.Printf("\t\t\tRowNo:     _%s_rowNoMap[%s],\n", child.Name, strings.Join(xxxfixes(m.Children[i].PkNames, "v.", ""), "]["))
+		g.Printf("\t\t\tRowNo:     _%s_rowNoMap[%s],\n", child.Name, strings.Join(prefixes(m.Children[i].PkNames, "v."), "]["))
 		g.Printf("\t\t\tValues: []interface{}{\n")
 
 		for _, f := range child.Fields {
@@ -629,6 +629,13 @@ func (g *Generator) outputAsync(m model, o option) {
 
 // Helper
 
+func autoNumbering(pkName, pkType string) bool {
+	if pkType == "int" && pkName[len(pkName)-2:] == "ID" {
+		return true
+	}
+	return false
+}
+
 func nilValue(t string) string {
 	if t == "" {
 		return ""
@@ -644,10 +651,10 @@ func nilValue(t string) string {
 	return "v"
 }
 
-func xxxfixes(strs []string, prefix, suffix string) []string {
+func prefixes(strs []string, prefix string) []string {
 	r := []string{}
 	for _, str := range strs {
-		r = append(r, prefix+str+suffix)
+		r = append(r, prefix+str)
 	}
 	return r
 }
