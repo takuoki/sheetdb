@@ -68,6 +68,8 @@ github.com/stretchr/objx v0.1.1/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/takuoki/clmconv v1.0.0 h1:Y8aPOfMCybQSCj2Q278SIGPSE0BPLoLmuBhhAEiT95w=
 github.com/takuoki/clmconv v1.0.0/go.mod h1:g5my4loqBajQAnDp/3OOAYCJVoLI0+UoQCkcJZLY3JY=
+github.com/takuoki/gocase v1.0.0 h1:gPwLJTWVm2T1kUiCsKirg/faaIUGVTI0FA3SYr75a44=
+github.com/takuoki/gocase v1.0.0/go.mod h1:QgOKJrbuJoDrtoKswBX1/Dw8mJrkOV9tbQZJaxaJ6zc=
 github.com/takuoki/gsheets v0.2.0 h1:5dnOq2nsRM0nBuVrYFXnOtwfF+P+Xz2iLW9CDAx4AYM=
 github.com/takuoki/gsheets v0.2.0/go.mod h1:NZFwU/zq00ztdhBvHDqSkWDTziJmk8YRDEB+CqfxIz0=
 go.opencensus.io v0.19.1/go.mod h1:gug0GbSHa8Pafr0d2urOSgoXHZ6x/RUlaiT0d9pqb4A=

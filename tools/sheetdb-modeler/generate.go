@@ -7,6 +7,7 @@ import (
 
 	"github.com/iancoleman/strcase"
 	"github.com/jinzhu/inflection"
+	"github.com/takuoki/gocase"
 )
 
 type model struct {
@@ -85,8 +86,8 @@ func (g *Generator) generate(typeName, parentName, childrenNames, clientName str
 	s.Model.ChildrenNames = s.Children
 	for _, c := range s.Children {
 		s.Model.ChildrenNamePlurals = append(s.Model.ChildrenNamePlurals, inflection.Plural(c))
-		s.Model.ChildrenNameLowers = append(s.Model.ChildrenNameLowers, strcase.ToLowerCamel(c))
-		s.Model.ChildrenNameLowerPlurals = append(s.Model.ChildrenNameLowerPlurals, inflection.Plural(strcase.ToLowerCamel(c)))
+		s.Model.ChildrenNameLowers = append(s.Model.ChildrenNameLowers, gocase.To(strcase.ToLowerCamel(gocase.Revert(c))))
+		s.Model.ChildrenNameLowerPlurals = append(s.Model.ChildrenNameLowerPlurals, gocase.To(inflection.Plural(strcase.ToLowerCamel(gocase.Revert(c)))))
 	}
 
 	// TODO: validation
@@ -149,8 +150,8 @@ func (s *search) buildModel(typ *ast.TypeSpec) *model {
 	m := model{
 		Name:            typ.Name.Name,
 		NamePlural:      inflection.Plural(typ.Name.Name),
-		NameLower:       strcase.ToLowerCamel(typ.Name.Name),
-		NameLowerPlural: inflection.Plural(strcase.ToLowerCamel(typ.Name.Name)),
+		NameLower:       gocase.To(strcase.ToLowerCamel(gocase.Revert(typ.Name.Name))),
+		NameLowerPlural: gocase.To(inflection.Plural(strcase.ToLowerCamel(gocase.Revert(typ.Name.Name)))),
 	}
 
 	st, ok := typ.Type.(*ast.StructType)
@@ -164,7 +165,7 @@ func (s *search) buildModel(typ *ast.TypeSpec) *model {
 		}
 		f2 := field{
 			Name:      f.Names[0].Name,
-			NameLower: strcase.ToLowerCamel(f.Names[0].Name),
+			NameLower: gocase.To(strcase.ToLowerCamel(gocase.Revert(f.Names[0].Name))),
 		}
 		m.FieldNames = append(m.FieldNames, f2.Name)
 		m.FieldNameLowers = append(m.FieldNameLowers, f2.NameLower)
