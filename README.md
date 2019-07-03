@@ -6,7 +6,31 @@ A golang package for using Google spreadsheets as a database instead of the actu
 
 Currently we are not measuring performance. It is intended for use in small applications where performance is not an issue.
 
-## Features
+<!-- vscode-markdown-toc -->
+* [Features](#Features)
+* [Installation](#Installation)
+* [Requirement](#Requirement)
+* [Usage](#Usage)
+	* [1. Write models](#Writemodels)
+	* [2. Generate codes from models](#Generatecodesfrommodels)
+	* [3. Set up Google spreadsheet](#SetupGooglespreadsheet)
+	* [4. Initialize models](#Initializemodels)
+		* [Create new client](#Createnewclient)
+		* [Set up nortificaltion](#Setupnortificaltion)
+		* [Load sheet data](#Loadsheetdata)
+	* [5. Use CRUD functions](#UseCRUDfunctions)
+		* [Read (Get/Select)](#ReadGetSelect)
+		* [Create (Add/Insert)](#CreateAddInsert)
+		* [Update](#Update)
+		* [Delete](#Delete)
+
+<!-- vscode-markdown-toc-config
+	numbering=false
+	autoSave=true
+	/vscode-markdown-toc-config -->
+<!-- /vscode-markdown-toc -->
+
+## <a name='Features'></a>Features
 
 * Load sheet data into cache
 * Apply cache update information to sheet asynchronously
@@ -23,20 +47,20 @@ The following features are not included.
 * Transaction control (commit and rollback)
 * Read Lock for Update
 
-## Installation
+## <a name='Installation'></a>Installation
 
 ```bash
 go get github.com/takuoki/sheetdb
 ```
 
-## Requirement
+## <a name='Requirement'></a>Requirement
 
 This package uses Google OAuth2.0. So before executing tool, you have to prepare credentials.json.
 See [Go Quickstart](https://developers.google.com/sheets/api/quickstart/go), or [blog post (Japanese)](https://medium.com/veltra-engineering/how-to-use-google-sheets-api-with-golang-9e50ee9e0abc) for the details.
 
-## Usage
+## <a name='Usage'></a>Usage
 
-### 1. Write models
+### <a name='Writemodels'></a>1. Write models
 
 Write the structure of the model as follows.
 Please refer to [the sheetdb-modeler tool documentation](tools/sheetdb-modeler) for details.
@@ -84,7 +108,7 @@ type Bar struct {
 }
 ```
 
-### 2. Generate codes from models
+### <a name='Generatecodesfrommodels'></a>2. Generate codes from models
 
 You can generate in bulk with the `go generate` command by putting `//go:generate sheetdb-modeler` comments in the code of the target package.
 
@@ -92,7 +116,7 @@ You can generate in bulk with the `go generate` command by putting `//go:generat
 go generate
 ```
 
-### 3. Set up Google spreadsheet
+### <a name='SetupGooglespreadsheet'></a>3. Set up Google spreadsheet
 
 Prepare a spreadsheet according to the header comments of each generated file.
 
@@ -104,9 +128,9 @@ Prepare a spreadsheet according to the header comments of each generated file.
 // Please copy and paste this header on the first line of the sheet.
 ```
 
-### 4. Initialize models
+### <a name='Initializemodels'></a>4. Initialize models
 
-#### Create new client
+#### <a name='Createnewclient'></a>Create new client
 
 ```go
 client, err := sheetdb.New(
@@ -117,21 +141,21 @@ client, err := sheetdb.New(
 )
 ```
 
-### Set up nortificaltion
+#### <a name='Setupnortificaltion'></a>Set up nortificaltion
 
 TBD
 
-#### Load sheet data
+#### <a name='Loadsheetdata'></a>Load sheet data
 
 ```go
 err := client.LoadData(ctx)
 ```
 
-### 5. Use CRUD functions
+### <a name='UseCRUDfunctions'></a>5. Use CRUD functions
 
 The functions in this section are generated automatically.
 
-#### Read (Get/Select)
+#### <a name='ReadGetSelect'></a>Read (Get/Select)
 
 ```go
 user, err := GetUser(userID)
@@ -175,7 +199,7 @@ bars, err := user.GetBars(BarSort(func(bars []*Bar) {
 }))
 ```
 
-#### Create (Add/Insert)
+#### <a name='CreateAddInsert'></a>Create (Add/Insert)
 
 ```go
 user, err := AddUser(name, email, sex, birthday)
@@ -188,7 +212,7 @@ foo, err := AddFoo(userID, value, note)
 bar, err := AddBar(userID, datetime, value, note)
 ```
 
-#### Update
+#### <a name='Update'></a>Update
 
 ```go
 user, err := UpdateUser(userID, name, email, sex, birthday)
@@ -201,7 +225,7 @@ foo, err := UpdateFoo(userID, fooID, value, note)
 bar, err := UpdateBar(userID, datetime, value, note)
 ```
 
-#### Delete
+#### <a name='Delete'></a>Delete
 
 If the table has child tables, the delete function deletes the data of the child table in cascade.
 
