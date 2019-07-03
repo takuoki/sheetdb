@@ -23,7 +23,6 @@ var (
 	clientName    = flag.String("client", "dbClient", "variable name of sheetdb package client")
 	initialNum    = flag.Int("initial", 1, "initial number of auto numbering")
 	output        = flag.String("output", "", "output file name; default srcdir/<type>_model.go")
-	// TODO client name
 )
 
 // Usage is a replacement usage function for the flags package.
@@ -72,7 +71,7 @@ func main() {
 	// Write to file.
 	outputName := *output
 	if outputName == "" {
-		baseName := fmt.Sprintf("%s_model.go", *typeName)
+		baseName := fmt.Sprintf("model_%s.go", *typeName)
 		outputName = filepath.Join(dir, strings.ToLower(baseName))
 	}
 	err := ioutil.WriteFile(outputName, src, 0644)
