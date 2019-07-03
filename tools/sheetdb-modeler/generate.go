@@ -210,22 +210,28 @@ func (s *search) buildModel(typ *ast.TypeSpec) *model {
 
 		// set tag related fields
 		if f.Tag.Value != "" {
-			for _, tag := range strings.Split(f.Tag.Value[1:len(f.Tag.Value)-1], ",") {
-				switch tag {
-				case "primary":
-					f2.IsPk = true
-					m.PkNames = append(m.PkNames, f2.Name)
-					m.PkNameLowers = append(m.PkNameLowers, f2.NameLower)
-					m.PkTypes = append(m.PkTypes, f2.Typ)
-					// the last primary key is "this" key
-					m.ThisKeyName = f2.Name
-					m.ThisKeyNameLower = f2.NameLower
-					m.ThisKeyType = f2.Typ
-				case "allowempty":
-					f2.AllowEmpty = true
-				case "unique":
-					f2.Unique = true
+			for _, tags := range strings.Split(f.Tag.Value[1:len(f.Tag.Value)-1], " ") {
+				if len(tags) < 4 || tags[:4] != `db:"` {
+					continue
 				}
+				for _, tag := range strings.Split(tags[4:len(tags)-1], ",") {
+					switch tag {
+					case "primarykey":
+						f2.IsPk = true
+						m.PkNames = append(m.PkNames, f2.Name)
+						m.PkNameLowers = append(m.PkNameLowers, f2.NameLower)
+						m.PkTypes = append(m.PkTypes, f2.Typ)
+						// the last primary key is "this" key
+						m.ThisKeyName = f2.Name
+						m.ThisKeyNameLower = f2.NameLower
+						m.ThisKeyType = f2.Typ
+					case "allowempty":
+						f2.AllowEmpty = true
+					case "unique":
+						f2.Unique = true
+					}
+				}
+				break
 			}
 		}
 		if !f2.IsPk {
