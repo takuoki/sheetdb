@@ -210,7 +210,7 @@ func (s *search) buildModel(typ *ast.TypeSpec) *model {
 		m.FieldTypes = append(m.FieldTypes, f2.Typ)
 
 		// set tag related fields
-		if f.Tag.Value != "" {
+		if f.Tag != nil && f.Tag.Value != "" {
 			for _, tags := range strings.Split(f.Tag.Value[1:len(f.Tag.Value)-1], " ") {
 				if len(tags) < 4 || tags[:4] != `db:"` {
 					continue

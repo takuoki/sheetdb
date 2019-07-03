@@ -33,7 +33,7 @@ func (g *Generator) outputHeader(m model) {
 		g.Printf("%s | ", strcase.ToSnake(f.Name))
 	}
 	g.Printf("updated_at | deleted_at\n")
-	g.Printf("// Please paste this header on the first line of the sheet.\n")
+	g.Printf("// Please copy and paste this header on the first line of the sheet.\n")
 	g.Printf("\npackage %s\n\n", g.pkg.name)
 }
 
@@ -283,6 +283,16 @@ func (g *Generator) outputAdd(m model, o option) {
 
 	g.Printf("\t_%s_mutex.Lock()\n", m.Name)
 	g.Printf("\tdefer _%s_mutex.Unlock()\n", m.Name)
+
+	if !autoNumbering(m.ThisKeyName, m.ThisKeyType) {
+		if m.Parent == nil {
+			g.Printf("\tif _, ok := _%[1]s_cache[%[2]s]; ok {\n", m.Name, strings.Join(m.PkNameLowers, "]["))
+		} else {
+			g.Printf("\tif _, ok := _%[1]s_cache[%[2]s][%[3]s]; ok {\n", m.Name, strings.Join(prefixes(m.Parent.PkNames, "m."), "]["), m.ThisKeyNameLower)
+		}
+		g.Printf("\t\treturn nil, &sheetdb.DuplicationError{FieldName: \"%s\"}\n", m.ThisKeyName)
+		g.Printf("\t}\n")
+	}
 
 	for _, f := range m.Fields {
 		if !f.IsPk && f.Typ == "string" {

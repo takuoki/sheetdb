@@ -2,7 +2,7 @@
 // Create a Spreadsheet (sheet name: "bars") as data storage.
 // The spreadsheet header is as follows:
 //   user_id | datetime | value | note | updated_at | deleted_at
-// Please paste this header on the first line of the sheet.
+// Please copy and paste this header on the first line of the sheet.
 
 package sample
 
@@ -154,6 +154,9 @@ func GetBars(userID int, opts ...BarQueryOption) ([]*Bar, error) {
 func (m *User) AddBar(datetime sheetdb.Datetime, value float32, note string) (*Bar, error) {
 	_Bar_mutex.Lock()
 	defer _Bar_mutex.Unlock()
+	if _, ok := _Bar_cache[m.UserID][datetime]; ok {
+		return nil, &sheetdb.DuplicationError{FieldName: "Datetime"}
+	}
 	if err := _Bar_validateNote(note); err != nil {
 		return nil, err
 	}

@@ -2,7 +2,7 @@
 // Create a Spreadsheet (sheet name: "users") as data storage.
 // The spreadsheet header is as follows:
 //   user_id | name | email | sex | birthday | updated_at | deleted_at
-// Please paste this header on the first line of the sheet.
+// Please copy and paste this header on the first line of the sheet.
 
 package sample
 
