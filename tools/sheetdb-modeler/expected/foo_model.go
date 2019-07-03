@@ -212,14 +212,21 @@ func UpdateFoo(userID int, fooID int, value float32, note string) (*Foo, error) 
 func (m *User) DeleteFoo(fooID int) error {
 	_Foo_mutex.Lock()
 	defer _Foo_mutex.Unlock()
+	_FooChild_mutex.Lock()
+	defer _FooChild_mutex.Unlock()
 	foo, ok := _Foo_cache[m.UserID][fooID]
 	if !ok {
 		return &sheetdb.NotFoundError{Model: "Foo"}
 	}
-	if err := foo._asyncDelete(); err != nil {
+	var fooChildren []*FooChild
+	for _, v := range _FooChild_cache[m.UserID][fooID] {
+		fooChildren = append(fooChildren, v)
+	}
+	if err := foo._asyncDelete(fooChildren); err != nil {
 		return err
 	}
 	delete(_Foo_cache[m.UserID], fooID)
+	delete(_FooChild_cache[m.UserID], fooID)
 	return nil
 }
 
@@ -277,7 +284,7 @@ func (m *Foo) _asyncUpdate() error {
 	return dbClient.AsyncUpdate(data)
 }
 
-func (m *Foo) _asyncDelete() error {
+func (m *Foo) _asyncDelete(fooChildren []*FooChild) error {
 	now := time.Now()
 	data := []gsheets.UpdateValue{
 		{
@@ -292,6 +299,20 @@ func (m *Foo) _asyncDelete() error {
 				now,
 			},
 		},
+	}
+	for _, v := range fooChildren {
+		data = append(data, gsheets.UpdateValue{
+			SheetName: _FooChild_sheetName,
+			RowNo:     _FooChild_rowNoMap[v.UserID][v.FooID][v.ChildID],
+			Values: []interface{}{
+				v.UserID,
+				v.FooID,
+				v.ChildID,
+				v.Value,
+				now,
+				now,
+			},
+		})
 	}
 	return dbClient.AsyncUpdate(data)
 }

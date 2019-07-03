@@ -171,12 +171,12 @@ func (g *Generator) outputParentMap(m model) {
 			}
 			g.Printf("[%s.%s]", m.NameLower, f2)
 		}
-		g.Printf(" = map")
+		g.Printf(" = ")
 		for j, f2 := range m.PkTypes {
 			if j <= i {
 				continue
 			}
-			g.Printf("[%s]", f2)
+			g.Printf("map[%s]", f2)
 		}
 		g.Printf("*%[1]s{}\n", m.Name)
 		g.Printf("}\n")
@@ -458,7 +458,11 @@ func (g *Generator) outputDelete(m model) {
 
 	for _, child := range m.Children {
 		g.Printf("\tvar %[2]s []*%[1]s\n", child.Name, child.NameLowerPlural)
-		g.Printf("\tfor _, v := range _%s_cache[%s] {\n", child.Name, strings.Join(m.PkNameLowers, "]["))
+		if m.Parent == nil {
+			g.Printf("\tfor _, v := range _%[1]s_cache[%[2]s] {\n", child.Name, m.ThisKeyNameLower)
+		} else {
+			g.Printf("\tfor _, v := range _%[1]s_cache[%[2]s][%[3]s] {\n", child.Name, strings.Join(prefixes(m.Parent.PkNames, "m."), "]["), m.ThisKeyNameLower)
+		}
 		g.Printf("\t\t%[1]s = append(%[1]s, v)\n", child.NameLowerPlural)
 		g.Printf("\t}\n")
 	}

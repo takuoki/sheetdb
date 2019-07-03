@@ -17,7 +17,7 @@ type User struct {
 	Birthday *sheetdb.Date `json:"birthday"`
 }
 
-//go:generate sheetdb-modeler -type=Foo -parent=User
+//go:generate sheetdb-modeler -type=Foo -parent=User -children=FooChild
 
 // Foo is a struct of foo which is a child of user.
 type Foo struct {
@@ -25,6 +25,16 @@ type Foo struct {
 	FooID  int     `json:"foo_id" db:"primarykey"`
 	Value  float32 `json:"value"`
 	Note   string  `json:"note" db:"allowempty"`
+}
+
+//go:generate sheetdb-modeler -type=FooChild -parent=Foo
+
+// FooChild is a struct of foo child.
+type FooChild struct {
+	UserID  int     `json:"user_id" db:"primarykey"`
+	FooID   int     `json:"foo_id" db:"primarykey"`
+	ChildID int     `json:"child_id" db:"primarykey"`
+	Value   float32 `json:"value"`
 }
 
 //go:generate sheetdb-modeler -type=Bar -parent=User
@@ -39,7 +49,7 @@ type Bar struct {
 
 //go:generate sheetdb-modeler -type=TypeTest
 
-// TypeTest is a struct for name test.
+// TypeTest is a struct for type test.
 type TypeTest struct {
 	ID             int               `json:"id" db:"primarykey"`
 	StringValue    string            `json:"string_value"`
