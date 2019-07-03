@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 )
 
-//go:generate stringer -type=Sex
-
 // Sex is user's sex.
 type Sex int
 

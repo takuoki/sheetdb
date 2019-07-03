@@ -57,12 +57,16 @@ func (g *Generator) outputConst(m model) {
 }
 
 func (g *Generator) outputVar(m model) {
-	// TODO: comment
 	g.Printf("var (\n")
 	g.Printf("\t_%s_mutex = sync.RWMutex{}\n", m.Name)
-	g.Printf("\t_%[1]s_cache = map[%[2]s]*%[1]s{}\n", m.Name, strings.Join(m.PkTypes, "]map["))
-	g.Printf("\t_%s_rowNoMap = map[%s]int{}\n", m.Name, strings.Join(m.PkTypes, "]map["))
+	g.Printf("\t_%[1]s_cache = map[%[2]s]*%[1]s{} // map[%[3]s]*%[1]s\n", m.Name, strings.Join(m.PkTypes, "]map["), strings.Join(m.PkNameLowers, "]["))
+	g.Printf("\t_%s_rowNoMap = map[%s]int{} // map[%[3]s]rowNo\n", m.Name, strings.Join(m.PkTypes, "]map["), strings.Join(m.PkNameLowers, "]["))
 	g.Printf("\t_%s_maxRowNo int\n", m.Name)
+	for _, f := range m.Fields {
+		if f.Unique {
+			g.Printf("\t_%[1]s_%[2]s_uniqueSet =map[string]struct{}{}\n", m.Name, f.Name)
+		}
+	}
 	g.Printf(")\n\n")
 }
 
@@ -117,10 +121,15 @@ func (g *Generator) outputLoad(m model) {
 	}
 	g.Printf("\t\t}\n\n")
 
+	for _, f := range m.Fields {
+		if f.Unique {
+			g.Printf("\t\t_%[1]s_%[2]s_uniqueSet[%[3]s.%[2]s] = struct{}{}\n", m.Name, f.Name, m.NameLower)
+		}
+	}
 	g.Printf("\t\t_%s_maxRowNo++\n", m.Name)
 	g.outputParentMap(m)
-	g.Printf("\t\t_%[1]s_cache[%[3]s] = &%[2]s\n", m.Name, m.NameLower, strings.Join(m.PkNameLowers, "]["))
-	g.Printf("\t\t_%[1]s_rowNoMap[%[2]s] = _%[1]s_maxRowNo\n", m.Name, strings.Join(m.PkNameLowers, "]["))
+	g.Printf("\t\t_%[1]s_cache[%[3]s] = &%[2]s\n", m.Name, m.NameLower, strings.Join(prefixes(m.PkNames, m.NameLower+"."), "]["))
+	g.Printf("\t\t_%[1]s_rowNoMap[%[2]s] = _%[1]s_maxRowNo\n", m.Name, strings.Join(prefixes(m.PkNames, m.NameLower+"."), "]["))
 	g.Printf("\t}\n\n")
 
 	g.Printf("\treturn nil\n")
@@ -292,6 +301,11 @@ func (g *Generator) outputAdd(m model, o option) {
 	g.Printf("\tif err := %s._asyncUpdate(); err != nil {\n", m.NameLower)
 	g.Printf("\t\treturn nil, err\n")
 	g.Printf("\t}\n")
+	for _, f := range m.Fields {
+		if f.Unique {
+			g.Printf("\t_%[1]s_%[2]s_uniqueSet[%[3]s.%[2]s] = struct{}{}\n", m.Name, f.Name, m.NameLower)
+		}
+	}
 	g.Printf("\t_%s_maxRowNo++\n", m.Name)
 
 	g.outputParentMap(m)
@@ -346,20 +360,6 @@ func (g *Generator) outputUpdate(m model) {
 	g.Printf("\t_%s_mutex.Lock()\n", m.Name)
 	g.Printf("\tdefer _%s_mutex.Unlock()\n", m.Name)
 
-	for _, f := range m.Fields {
-		if !f.IsPk && f.Typ == "string" {
-			if f.Unique {
-				g.Printf("\tif err := _%[1]s_validate%[2]s(%[3]s, &%[4]s); err != nil {\n", m.Name, f.Name, f.NameLower, strings.Join(m.PkNameLowers, ", &"))
-				g.Printf("\t\treturn nil, err\n")
-				g.Printf("\t}\n")
-			} else {
-				g.Printf("\tif err := _%[1]s_validate%[2]s(%[3]s); err != nil {\n", m.Name, f.Name, f.NameLower)
-				g.Printf("\t\treturn nil, err\n")
-				g.Printf("\t}\n")
-			}
-		}
-	}
-
 	if m.Parent == nil {
 		g.Printf("\t%[2]s, ok := _%[1]s_cache[%[3]s]\n", m.Name, m.NameLower, strings.Join(m.PkNameLowers, "]["))
 	} else {
@@ -369,6 +369,19 @@ func (g *Generator) outputUpdate(m model) {
 	g.Printf("\tif !ok {\n")
 	g.Printf("\t\treturn nil, &sheetdb.NotFoundError{Model: \"%s\"}\n", m.Name)
 	g.Printf("\t}\n")
+
+	for _, f := range m.Fields {
+		if !f.IsPk && f.Typ == "string" {
+			if f.Unique {
+				g.Printf("\tif err := _%[1]s_validate%[3]s(%[4]s, &%[2]s.%[3]s); err != nil {\n", m.Name, m.NameLower, f.Name, f.NameLower)
+			} else {
+				g.Printf("\tif err := _%[1]s_validate%[2]s(%[3]s); err != nil {\n", m.Name, f.Name, f.NameLower)
+			}
+			g.Printf("\t\treturn nil, err\n")
+			g.Printf("\t}\n")
+		}
+	}
+
 	g.Printf("\t%[1]sCopy := *%[1]s\n", m.NameLower)
 
 	for _, f := range m.Fields {
@@ -380,6 +393,16 @@ func (g *Generator) outputUpdate(m model) {
 	g.Printf("\tif err := (&%sCopy)._asyncUpdate(); err != nil {\n", m.NameLower)
 	g.Printf("\t\treturn nil, err\n")
 	g.Printf("\t}\n")
+
+	for _, f := range m.Fields {
+		if f.Unique {
+			g.Printf("\tif %[1]sCopy.%[2]s != %[1]s.%[2]s {\n", m.NameLower, f.Name)
+			g.Printf("\t\t_%[1]s_%[3]s_uniqueSet[%[2]sCopy.%[3]s] = struct{}{}\n", m.Name, m.NameLower, f.Name)
+			g.Printf("\t\tdelete(_%[1]s_%[3]s_uniqueSet, %[2]s.%[3]s)\n", m.Name, m.NameLower, f.Name)
+			g.Printf("\t}\n")
+		}
+	}
+
 	g.Printf("\t%[1]s = &%[1]sCopy\n", m.NameLower)
 	g.Printf("\treturn %s, nil\n", m.NameLower)
 	g.Printf("}\n\n")
@@ -429,6 +452,12 @@ func (g *Generator) outputDelete(m model) {
 	g.Printf("\t\treturn err\n")
 	g.Printf("\t}\n")
 
+	for _, f := range m.Fields {
+		if f.Unique {
+			g.Printf("\tdelete(_%[1]s_%[3]s_uniqueSet, %[2]s.%[3]s)\n", m.Name, m.NameLower, f.Name)
+		}
+	}
+
 	if m.Parent == nil {
 		g.Printf("\tdelete(_%[1]s_cache, %[2]s)\n", m.Name, m.ThisKeyNameLower)
 	} else {
@@ -455,7 +484,6 @@ func (g *Generator) outputDelete(m model) {
 }
 
 func (g *Generator) outputValidate(m model) {
-	// TODO: use cache for unique check
 	pkNameAndTypes := []string{}
 	pkEqualConditions := []string{}
 	for _, f := range m.Fields {
@@ -469,7 +497,7 @@ func (g *Generator) outputValidate(m model) {
 			continue
 		}
 		if f.Unique {
-			g.Printf("func _%[1]s_validate%[2]s(%[3]s string, %[4]s) error {\n", m.Name, f.Name, f.NameLower, strings.Join(pkNameAndTypes, ", "))
+			g.Printf("func _%[1]s_validate%[2]s(%[3]s string, old%[2]s *string) error {\n", m.Name, f.Name, f.NameLower)
 		} else {
 			g.Printf("func _%[1]s_validate%[2]s(%[3]s string) error {\n", m.Name, f.Name, f.NameLower)
 		}
@@ -481,20 +509,9 @@ func (g *Generator) outputValidate(m model) {
 		}
 
 		if f.Unique {
-			g.Printf("\tif %s == nil {\n", strings.Join(m.PkNameLowers, " == nil || "))
-			g.Printf("\t\tfor _, v := range _%s_cache {\n", m.Name)
-			g.Printf("\t\t\tif %[2]s == v.%[1]s {\n", f.Name, f.NameLower)
-			g.Printf("\t\t\t\treturn &sheetdb.DuplicationError{FieldName: \"%s\"}\n", f.Name)
-			g.Printf("\t\t\t}\n")
-			g.Printf("\t\t}\n")
-			g.Printf("\t} else {\n")
-			g.Printf("\t\tfor _, v := range _%s_cache {\n", m.Name)
-			g.Printf("\t\t\tif %s {\n", strings.Join(pkEqualConditions, " && "))
-			g.Printf("\t\t\t\tcontinue\n")
-			g.Printf("\t\t\t}\n")
-			g.Printf("\t\t\tif %[2]s == v.%[1]s {\n", f.Name, f.NameLower)
-			g.Printf("\t\t\t\treturn &sheetdb.DuplicationError{FieldName: \"%s\"}\n", f.Name)
-			g.Printf("\t\t\t}\n")
+			g.Printf("\tif old%[1]s == nil || *old%[1]s != %[2]s {\n", f.Name, f.NameLower)
+			g.Printf("\t\tif _, ok := _%[1]s_%[2]s_uniqueSet[%[3]s]; ok {\n", m.Name, f.Name, f.NameLower)
+			g.Printf("\t\t\treturn &sheetdb.DuplicationError{FieldName: \"%s\"}\n", f.Name)
 			g.Printf("\t\t}\n")
 			g.Printf("\t}\n")
 		}

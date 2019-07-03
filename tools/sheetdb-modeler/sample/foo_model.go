@@ -23,8 +23,8 @@ const (
 
 var (
 	_Foo_mutex    = sync.RWMutex{}
-	_Foo_cache    = map[int]map[int]*Foo{}
-	_Foo_rowNoMap = map[int]map[int]int{}
+	_Foo_cache    = map[int]map[int]*Foo{} // map[userID][fooID]*Foo
+	_Foo_rowNoMap = map[int]map[int]int{}  // map[userID][fooID]rowNo
 	_Foo_maxRowNo int
 )
 
@@ -81,8 +81,8 @@ func _Foo_load(data *gsheets.Sheet) error {
 		if _, ok := _Foo_cache[foo.UserID]; !ok {
 			_Foo_cache[foo.UserID] = map[int]*Foo{}
 		}
-		_Foo_cache[userID][fooID] = &foo
-		_Foo_rowNoMap[userID][fooID] = _Foo_maxRowNo
+		_Foo_cache[foo.UserID][foo.FooID] = &foo
+		_Foo_rowNoMap[foo.UserID][foo.FooID] = _Foo_maxRowNo
 	}
 
 	return nil
@@ -182,12 +182,12 @@ func AddFoo(userID int, value float32, note string) (*Foo, error) {
 func (m *User) UpdateFoo(fooID int, value float32, note string) (*Foo, error) {
 	_Foo_mutex.Lock()
 	defer _Foo_mutex.Unlock()
-	if err := _Foo_validateNote(note); err != nil {
-		return nil, err
-	}
 	foo, ok := _Foo_cache[m.UserID][fooID]
 	if !ok {
 		return nil, &sheetdb.NotFoundError{Model: "Foo"}
+	}
+	if err := _Foo_validateNote(note); err != nil {
+		return nil, err
 	}
 	fooCopy := *foo
 	fooCopy.Value = value

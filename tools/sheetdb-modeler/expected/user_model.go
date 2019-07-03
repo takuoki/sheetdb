@@ -1,3 +1,5 @@
+// Header text
+
 package sample
 
 import (
@@ -21,10 +23,11 @@ const (
 )
 
 var (
-	_User_mutex    = sync.RWMutex{}
-	_User_cache    = map[int]*User{} // map[userID]*User
-	_User_rowNoMap = map[int]int{}   // map[userID]rowNo
-	_User_maxRowNo int
+	_User_mutex           = sync.RWMutex{}
+	_User_cache           = map[int]*User{} // map[userID]*User
+	_User_rowNoMap        = map[int]int{}   // map[userID]rowNo
+	_User_maxRowNo        int
+	_User_Email_uniqueSet = map[string]struct{}{}
 )
 
 func init() {
@@ -81,9 +84,10 @@ func _User_load(data *gsheets.Sheet) error {
 			Birthday: birthday,
 		}
 
+		_User_Email_uniqueSet[user.Email] = struct{}{}
 		_User_maxRowNo++
-		_User_cache[userID] = &user
-		_User_rowNoMap[userID] = _User_maxRowNo
+		_User_cache[user.UserID] = &user
+		_User_rowNoMap[user.UserID] = _User_maxRowNo
 	}
 
 	return nil
@@ -167,6 +171,7 @@ func AddUser(name string, email string, sex Sex, birthday *sheetdb.Date) (*User,
 	if err := user._asyncUpdate(); err != nil {
 		return nil, err
 	}
+	_User_Email_uniqueSet[user.Email] = struct{}{}
 	_User_maxRowNo++
 	_User_cache[user.UserID] = user
 	_User_rowNoMap[user.UserID] = _User_maxRowNo
@@ -176,15 +181,15 @@ func AddUser(name string, email string, sex Sex, birthday *sheetdb.Date) (*User,
 func UpdateUser(userID int, name string, email string, sex Sex, birthday *sheetdb.Date) (*User, error) {
 	_User_mutex.Lock()
 	defer _User_mutex.Unlock()
-	if err := _User_validateName(name); err != nil {
-		return nil, err
-	}
-	if err := _User_validateEmail(email, &userID); err != nil {
-		return nil, err
-	}
 	user, ok := _User_cache[userID]
 	if !ok {
 		return nil, &sheetdb.NotFoundError{Model: "User"}
+	}
+	if err := _User_validateName(name); err != nil {
+		return nil, err
+	}
+	if err := _User_validateEmail(email, &user.Email); err != nil {
+		return nil, err
 	}
 	userCopy := *user
 	userCopy.Name = name
@@ -193,6 +198,10 @@ func UpdateUser(userID int, name string, email string, sex Sex, birthday *sheetd
 	userCopy.Birthday = birthday
 	if err := (&userCopy)._asyncUpdate(); err != nil {
 		return nil, err
+	}
+	if userCopy.Email != user.Email {
+		_User_Email_uniqueSet[userCopy.Email] = struct{}{}
+		delete(_User_Email_uniqueSet, user.Email)
 	}
 	user = &userCopy
 	return user, nil
@@ -220,6 +229,7 @@ func DeleteUser(userID int) error {
 	if err := user._asyncDelete(foos, bars); err != nil {
 		return err
 	}
+	delete(_User_Email_uniqueSet, user.Email)
 	delete(_User_cache, userID)
 	delete(_Foo_cache, userID)
 	delete(_Bar_cache, userID)
@@ -233,24 +243,13 @@ func _User_validateName(name string) error {
 	return nil
 }
 
-func _User_validateEmail(email string, userID *int) error {
+func _User_validateEmail(email string, oldEmail *string) error {
 	if email == "" {
 		return &sheetdb.EmptyStringError{FieldName: "Email"}
 	}
-	if userID == nil {
-		for _, v := range _User_cache {
-			if email == v.Email {
-				return &sheetdb.DuplicationError{FieldName: "Email"}
-			}
-		}
-	} else {
-		for _, v := range _User_cache {
-			if v.UserID == *userID {
-				continue
-			}
-			if email == v.Email {
-				return &sheetdb.DuplicationError{FieldName: "Email"}
-			}
+	if oldEmail == nil || *oldEmail != email {
+		if _, ok := _User_Email_uniqueSet[email]; ok {
+			return &sheetdb.DuplicationError{FieldName: "Email"}
 		}
 	}
 	return nil

@@ -23,8 +23,8 @@ const (
 
 var (
 	_Bar_mutex    = sync.RWMutex{}
-	_Bar_cache    = map[int]map[sheetdb.Datetime]*Bar{}
-	_Bar_rowNoMap = map[int]map[sheetdb.Datetime]int{}
+	_Bar_cache    = map[int]map[sheetdb.Datetime]*Bar{} // map[userID][datetime]*Bar
+	_Bar_rowNoMap = map[int]map[sheetdb.Datetime]int{}  // map[userID][datetime]rowNo
 	_Bar_maxRowNo int
 )
 
@@ -81,8 +81,8 @@ func _Bar_load(data *gsheets.Sheet) error {
 		if _, ok := _Bar_cache[bar.UserID]; !ok {
 			_Bar_cache[bar.UserID] = map[sheetdb.Datetime]*Bar{}
 		}
-		_Bar_cache[userID][datetime] = &bar
-		_Bar_rowNoMap[userID][datetime] = _Bar_maxRowNo
+		_Bar_cache[bar.UserID][bar.Datetime] = &bar
+		_Bar_rowNoMap[bar.UserID][bar.Datetime] = _Bar_maxRowNo
 	}
 
 	return nil
@@ -182,12 +182,12 @@ func AddBar(userID int, datetime sheetdb.Datetime, value float32, note string) (
 func (m *User) UpdateBar(datetime sheetdb.Datetime, value float32, note string) (*Bar, error) {
 	_Bar_mutex.Lock()
 	defer _Bar_mutex.Unlock()
-	if err := _Bar_validateNote(note); err != nil {
-		return nil, err
-	}
 	bar, ok := _Bar_cache[m.UserID][datetime]
 	if !ok {
 		return nil, &sheetdb.NotFoundError{Model: "Bar"}
+	}
+	if err := _Bar_validateNote(note); err != nil {
+		return nil, err
 	}
 	barCopy := *bar
 	barCopy.Value = value

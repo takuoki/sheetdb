@@ -40,12 +40,12 @@ type option struct {
 }
 
 type field struct {
-	Name          string
-	NameLower     string
-	Typ           string // *sheetdb.Date
-	TypNonPointer string // sheetdb.Date
-	Package       string // sheetdb
-	TypRaw        string // Date
+	Name          string // UserID | Date
+	NameLower     string // userID | date
+	Typ           string // int    | *sheetdb.Date
+	TypNonPointer string // int    | sheetdb.Date
+	Package       string //        | sheetdb
+	TypRaw        string // int    | Date
 	IsPointer     bool
 	IsPk          bool
 	IsParentKey   bool
