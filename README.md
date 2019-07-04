@@ -66,7 +66,7 @@ Write the structure of the model as follows.
 Please refer to [the sheetdb-modeler tool documentation](tools/sheetdb-modeler) for details.
 
 ```go
-//go:generate sheetdb-modeler -type=User -children=Foo,Bar -initial=10001
+//go:generate sheetdb-modeler -type=User -children=Foo,FooChild,Bar -initial=10001
 
 // User is a struct of user.
 type User struct {
