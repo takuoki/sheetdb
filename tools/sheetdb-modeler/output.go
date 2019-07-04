@@ -186,24 +186,69 @@ func (g *Generator) outputParentMap(m model) {
 }
 
 func (g *Generator) outputGet(m model) {
-	g.Printf("func Get%[1]s(%[2]s) (*%[1]s, error) {\n", m.Name, join(m.PkNameLowers, m.PkTypes, " ", ", "))
+
+	g.Printf("// Get%[1]s returns a %[2]s by %[3]s.\n", m.Name, m.NameLower, m.ThisKeyName)
+	if m.Parent == nil {
+		g.Printf("// If it can not be found, this function returns sheetdb.NotFoundError.\n")
+		g.Printf("func Get%[1]s(%[2]s) (*%[1]s, error) {\n", m.Name, join(m.PkNameLowers, m.PkTypes, " ", ", "))
+	} else {
+		g.Printf("// If it can not be found, this method returns sheetdb.NotFoundError.\n")
+		g.Printf("func (m *%[2]s) Get%[1]s(%[3]s %[4]s) (*%[1]s, error) {\n", m.Name, m.Parent.Name, m.ThisKeyNameLower, m.ThisKeyType)
+	}
+
 	g.Printf("\t_%s_mutex.RLock()\n", m.Name)
 	g.Printf("\tdefer _%s_mutex.RUnlock()\n", m.Name)
-	g.Printf("\tif v, ok := _%s_cache[%s]; ok {\n", m.Name, strings.Join(m.PkNameLowers, "]["))
+
+	if m.Parent == nil {
+		g.Printf("\tif v, ok := _%s_cache[%s]; ok {\n", m.Name, m.ThisKeyNameLower)
+	} else {
+		g.Printf("\tif v, ok := _%s_cache[%s][%s]; ok {\n", m.Name, strings.Join(prefixes(m.Parent.PkNames, "m."), "]["), m.ThisKeyNameLower)
+	}
+
 	g.Printf("\t\treturn v, nil\n")
 	g.Printf("\t}\n")
 	g.Printf("\treturn nil, &sheetdb.NotFoundError{Model: \"%s\"}\n", m.Name)
 	g.Printf("}\n\n")
+
+	if m.Parent != nil {
+		g.Printf("// Get%[1]s returns a %[2]s by primary keys.\n", m.Name, m.NameLower)
+		g.Printf("// If it can not be found, this function returns sheetdb.NotFoundError.\n")
+		g.Printf("func Get%[1]s(%[2]s) (*%[1]s, error) {\n", m.Name, join(m.PkNameLowers, m.PkTypes, " ", ", "))
+		g.outputGetParent(*m.Parent, true, 0)
+		g.Printf("\treturn m.Get%s(%s)\n", m.Name, m.ThisKeyNameLower)
+		g.Printf("}\n\n")
+	}
+}
+
+func (g *Generator) outputGetParent(m model, returnNil bool, i int) {
+	if m.Parent != nil {
+		g.outputGetParent(*m.Parent, returnNil, i+1)
+	}
+	if i == 0 {
+		g.Printf("\tm, err := Get%[1]s(%[2]s)\n", m.Name, strings.Join(m.PkNameLowers, ", "))
+	} else {
+		g.Printf("\tm%[3]d, err := Get%[1]s(%[2]s)\n", m.Name, strings.Join(m.PkNameLowers, ", "), i)
+	}
+	g.Printf("\tif err != nil {\n")
+	if returnNil {
+		g.Printf("\t\treturn nil, err\n")
+	} else {
+		g.Printf("\t\treturn err\n")
+	}
+	g.Printf("\t}\n")
 }
 
 func (g *Generator) outputGetList(m model) {
+	g.Printf("// %sQuery is used for selecting %s.\n", m.Name, m.NameLowerPlural)
 	g.Printf("type %sQuery struct {\n", m.Name)
 	g.Printf("\tfilter func(%[2]s *%[1]s) bool\n", m.Name, m.NameLower)
 	g.Printf("\tsort   func(%[2]s []*%[1]s)\n", m.Name, m.NameLowerPlural)
 	g.Printf("}\n\n")
 
+	g.Printf("// %[1]sQueryOption is an option to change the behavior of %[1]sQuery.\n", m.Name)
 	g.Printf("type %[1]sQueryOption func(query *%[1]sQuery) *%[1]sQuery\n\n", m.Name)
 
+	g.Printf("// %[1]sFilter is an option to change the filtering behavior of %[1]sQuery.\n", m.Name)
 	g.Printf("func %[1]sFilter(filterFunc func(%[2]s *%[1]s) bool) func(query *%[1]sQuery) *%[1]sQuery {\n", m.Name, m.NameLower)
 	g.Printf("\treturn func(query *%[1]sQuery) *%[1]sQuery {\n", m.Name)
 	g.Printf("\t\tif query != nil {\n")
@@ -213,6 +258,7 @@ func (g *Generator) outputGetList(m model) {
 	g.Printf("\t}\n")
 	g.Printf("}\n\n")
 
+	g.Printf("// %[1]sSort is an option to change the sorting behavior of %[1]sQuery.\n", m.Name)
 	g.Printf("func %[1]sSort(sortFunc func(%[2]s []*%[1]s)) func(query *%[1]sQuery) *%[1]sQuery {\n", m.Name, m.NameLowerPlural)
 	g.Printf("\treturn func(query *%[1]sQuery) *%[1]sQuery {\n", m.Name)
 	g.Printf("\t\tif query != nil {\n")
@@ -223,9 +269,15 @@ func (g *Generator) outputGetList(m model) {
 	g.Printf("}\n\n")
 
 	if m.Parent == nil {
+		g.Printf("// Get%s returns all %s.\n", m.NamePlural, m.NameLowerPlural)
+		g.Printf("// If any options are specified, the result according to the specified option is returned.\n")
+		g.Printf("// If there are no %s to return, this function returns an nil array.\n", m.NameLower)
 		g.Printf("func Get%[2]s(opts ...%[1]sQueryOption) ([]*%[1]s, error) {\n", m.Name, m.NamePlural)
 	} else {
-		g.Printf("func Get%[2]s(%[3]s, opts ...%[1]sQueryOption) ([]*%[1]s, error) {\n", m.Name, m.NamePlural, join(m.Parent.PkNameLowers, m.Parent.PkTypes, " ", ", "))
+		g.Printf("// Get%s returns all %s that %s has.\n", m.NamePlural, m.NameLowerPlural, m.Parent.NameLower)
+		g.Printf("// If any options are specified, the result according to the specified option is returned.\n")
+		g.Printf("// If there are no %s to return, this method returns an nil array.\n", m.NameLower)
+		g.Printf("func (m *%[3]s) Get%[2]s(opts ...%[1]sQueryOption) ([]*%[1]s, error) {\n", m.Name, m.NamePlural, m.Parent.Name)
 	}
 
 	g.Printf("\t%[2]sQuery := &%[1]sQuery{}\n", m.Name, m.NameLower)
@@ -234,13 +286,13 @@ func (g *Generator) outputGetList(m model) {
 	g.Printf("\t}\n")
 	g.Printf("\t_%s_mutex.RLock()\n", m.Name)
 	g.Printf("\tdefer _%s_mutex.RUnlock()\n", m.Name)
-	g.Printf("\t%[2]s := []*%[1]s{}\n", m.Name, m.NameLowerPlural)
+	g.Printf("\tvar %[2]s []*%[1]s\n", m.Name, m.NameLowerPlural)
 	g.Printf("\tif %sQuery.filter != nil {\n", m.NameLower)
 
 	if m.Parent == nil {
 		g.Printf("\t\tfor _, v := range _%s_cache {\n", m.Name)
 	} else {
-		g.Printf("\t\tfor _, v := range _%s_cache[%s] {\n", m.Name, strings.Join(m.Parent.PkNameLowers, "]["))
+		g.Printf("\t\tfor _, v := range _%s_cache[%s] {\n", m.Name, strings.Join(prefixes(m.Parent.PkNames, "m."), "]["))
 	}
 
 	g.Printf("\t\t\tif %sQuery.filter(v) {\n", m.NameLower)
@@ -252,7 +304,7 @@ func (g *Generator) outputGetList(m model) {
 	if m.Parent == nil {
 		g.Printf("\t\tfor _, v := range _%s_cache {\n", m.Name)
 	} else {
-		g.Printf("\t\tfor _, v := range _%s_cache[%s] {\n", m.Name, strings.Join(m.Parent.PkNameLowers, "]["))
+		g.Printf("\t\tfor _, v := range _%s_cache[%s] {\n", m.Name, strings.Join(prefixes(m.Parent.PkNames, "m."), "]["))
 	}
 
 	g.Printf("\t\t\t%[1]s = append(%[1]s, v)\n", m.NameLowerPlural)
@@ -263,20 +315,40 @@ func (g *Generator) outputGetList(m model) {
 	g.Printf("\t}\n")
 	g.Printf("\treturn %s, nil\n", m.NameLowerPlural)
 	g.Printf("}\n\n")
+
+	if m.Parent != nil {
+		g.Printf("// Get%s returns all %s that %s has.\n", m.NamePlural, m.NameLowerPlural, m.Parent.NameLower)
+		g.Printf("// If any options are specified, the result according to the specified option is returned.\n")
+		g.Printf("// If there are no %s to return, this function returns an nil array.\n", m.NameLower)
+		g.Printf("func Get%[2]s(%[3]s, opts ...%[1]sQueryOption) ([]*%[1]s, error) {\n", m.Name, m.NamePlural, join(m.Parent.PkNameLowers, m.Parent.PkTypes, " ", ", "))
+		g.outputGetParent(*m.Parent, true, 0)
+		g.Printf("\treturn m.Get%s(opts...)\n", m.NamePlural)
+		g.Printf("}\n\n")
+	}
 }
 
 func (g *Generator) outputAdd(m model, o option) {
 
 	if m.Parent == nil {
+		g.Printf("// Add%s adds new %s.\n", m.Name, m.NameLower)
 		if autoNumbering(m.ThisKeyName, m.ThisKeyType) {
+			g.Printf("// %s is generated automatically.\n", m.ThisKeyName)
+			g.Printf("// If any fields are invalid, this function returns error.\n")
 			g.Printf("func Add%[1]s(%[2]s) (*%[1]s, error) {\n", m.Name, join(m.NonPkNameLowers, m.NonPkTypes, " ", ", "))
 		} else {
+			g.Printf("// If argument '%s' already exist, this function returns sheetdb.DuplicationError.\n", m.ThisKeyNameLower)
+			g.Printf("// If any fields are invalid, this function returns error.\n")
 			g.Printf("func Add%[1]s(%[2]s %[3]s, %[4]s) (*%[1]s, error) {\n", m.Name, m.ThisKeyNameLower, m.ThisKeyType, join(m.NonPkNameLowers, m.NonPkTypes, " ", ", "))
 		}
 	} else {
+		g.Printf("// Add%s adds new %s to %s.\n", m.Name, m.NameLower, m.Parent.NameLower)
 		if autoNumbering(m.ThisKeyName, m.ThisKeyType) {
+			g.Printf("// %s is generated automatically.\n", m.ThisKeyName)
+			g.Printf("// If any fields are invalid, this method returns error.\n")
 			g.Printf("func (m *%[2]s) Add%[1]s(%[3]s) (*%[1]s, error) {\n", m.Name, m.Parent.Name, join(m.NonPkNameLowers, m.NonPkTypes, " ", ", "))
 		} else {
+			g.Printf("// If argument '%s' already exists in this %s, this method returns sheetdb.DuplicationError.\n", m.ThisKeyNameLower, m.Parent.NameLower)
+			g.Printf("// If any fields are invalid, this method returns error.\n")
 			g.Printf("func (m *%[4]s) Add%[1]s(%[2]s %[3]s, %[5]s) (*%[1]s, error) {\n", m.Name, m.ThisKeyNameLower, m.ThisKeyType, m.Parent.Name, join(m.NonPkNameLowers, m.NonPkTypes, " ", ", "))
 		}
 	}
@@ -343,9 +415,14 @@ func (g *Generator) outputAdd(m model, o option) {
 	g.Printf("}\n\n")
 
 	if m.Parent != nil {
+		g.Printf("// Add%s adds new %s to %s.\n", m.Name, m.NameLower, m.Parent.NameLower)
 		if autoNumbering(m.ThisKeyName, m.ThisKeyType) {
+			g.Printf("// %s is generated automatically.\n", m.ThisKeyName)
+			g.Printf("// If any fields are invalid, this function returns error.\n")
 			g.Printf("func Add%[1]s(%[2]s, %[3]s) (*%[1]s, error) {\n", m.Name, join(m.Parent.PkNameLowers, m.Parent.PkTypes, " ", ", "), join(m.NonPkNameLowers, m.NonPkTypes, " ", ", "))
 		} else {
+			g.Printf("// If primary keys already exist, this function returns sheetdb.DuplicationError.\n")
+			g.Printf("// If any fields are invalid, this function returns error.\n")
 			g.Printf("func Add%[1]s(%[2]s) (*%[1]s, error) {\n", m.Name, join(m.FieldNameLowers, m.FieldTypes, " ", ", "))
 		}
 		g.outputGetParent(*m.Parent, true, 0)
@@ -358,29 +435,17 @@ func (g *Generator) outputAdd(m model, o option) {
 	}
 }
 
-func (g *Generator) outputGetParent(m model, returnNil bool, i int) {
-	if m.Parent != nil {
-		g.outputGetParent(*m.Parent, returnNil, i+1)
-	}
-	if i == 0 {
-		g.Printf("\tm, err := Get%[1]s(%[2]s)\n", m.Name, strings.Join(m.PkNameLowers, ", "))
-	} else {
-		g.Printf("\tm%[3]d, err := Get%[1]s(%[2]s)\n", m.Name, strings.Join(m.PkNameLowers, ", "), i)
-	}
-	g.Printf("\tif err != nil {\n")
-	if returnNil {
-		g.Printf("\t\treturn nil, err\n")
-	} else {
-		g.Printf("\t\treturn err\n")
-	}
-	g.Printf("\t}\n")
-}
-
 func (g *Generator) outputUpdate(m model) {
 
 	if m.Parent == nil {
+		g.Printf("// Update%s updates %s.\n", m.Name, m.NameLower)
+		g.Printf("// If it can not be found, this function returns sheetdb.NotFoundError.\n")
+		g.Printf("// If any fields are invalid, this function returns error.\n")
 		g.Printf("func Update%[1]s(%[2]s) (*%[1]s, error) {\n", m.Name, join(m.FieldNameLowers, m.FieldTypes, " ", ", "))
 	} else {
+		g.Printf("// Update%s updates %s.\n", m.Name, m.NameLower)
+		g.Printf("// If it can not be found, this method returns sheetdb.NotFoundError.\n")
+		g.Printf("// If any fields are invalid, this method returns error.\n")
 		g.Printf("func (m *%[2]s) Update%[1]s(%[3]s %[4]s, %[5]s) (*%[1]s, error) {\n", m.Name, m.Parent.Name, m.ThisKeyNameLower, m.ThisKeyType, join(m.NonPkNameLowers, m.NonPkTypes, " ", ", "))
 	}
 
@@ -388,7 +453,7 @@ func (g *Generator) outputUpdate(m model) {
 	g.Printf("\tdefer _%s_mutex.Unlock()\n", m.Name)
 
 	if m.Parent == nil {
-		g.Printf("\t%[2]s, ok := _%[1]s_cache[%[3]s]\n", m.Name, m.NameLower, strings.Join(m.PkNameLowers, "]["))
+		g.Printf("\t%[2]s, ok := _%[1]s_cache[%[3]s]\n", m.Name, m.NameLower, m.ThisKeyNameLower)
 	} else {
 		g.Printf("\t%[2]s, ok := _%[1]s_cache[%[3]s][%[4]s]\n", m.Name, m.NameLower, strings.Join(prefixes(m.Parent.PkNames, "m."), "]["), m.ThisKeyNameLower)
 	}
@@ -435,6 +500,9 @@ func (g *Generator) outputUpdate(m model) {
 	g.Printf("}\n\n")
 
 	if m.Parent != nil {
+		g.Printf("// Update%s updates %s.\n", m.Name, m.NameLower)
+		g.Printf("// If it can not be found, this function returns sheetdb.NotFoundError.\n")
+		g.Printf("// If any fields are invalid, this function returns error.\n")
 		g.Printf("func Update%[1]s(%[2]s) (*%[1]s, error) {\n", m.Name, join(m.FieldNameLowers, m.FieldTypes, " ", ", "))
 		g.outputGetParent(*m.Parent, true, 0)
 		g.Printf("\treturn m.Update%s(%s, %s)\n", m.Name, m.ThisKeyNameLower, strings.Join(m.NonPkNameLowers, ", "))
@@ -445,8 +513,24 @@ func (g *Generator) outputUpdate(m model) {
 func (g *Generator) outputDelete(m model) {
 
 	if m.Parent == nil {
+		if len(m.Children) == 0 {
+			g.Printf("// Delete%[1]s deletes %[2]s.\n", m.Name, m.NameLower)
+		} else if len(m.Children) == 1 {
+			g.Printf("// Delete%[1]s deletes %[2]s and it's children %[3]s.\n", m.Name, m.NameLower, m.ChildrenNameLowers[0])
+		} else {
+			g.Printf("// Delete%[1]s deletes %[2]s and it's children %[3]s and %[4]s.\n", m.Name, m.NameLower, strings.Join(m.ChildrenNameLowers[:len(m.Children)-1], ", "), m.ChildrenNameLowers[len(m.Children)-1])
+		}
+		g.Printf("// If it can not be found, this function returns sheetdb.NotFoundError.\n")
 		g.Printf("func Delete%[1]s(%[2]s %[3]s) error {\n", m.Name, m.ThisKeyNameLower, m.ThisKeyType)
 	} else {
+		if len(m.Children) == 0 {
+			g.Printf("// Delete%[1]s deletes %[2]s from %[3]s.\n", m.Name, m.NameLower, m.Parent.NameLower)
+		} else if len(m.Children) == 1 {
+			g.Printf("// Delete%[1]s deletes %[2]s and it's children %[4]s from %[3]s.\n", m.Name, m.NameLower, m.Parent.NameLower, m.ChildrenNameLowers[0])
+		} else {
+			g.Printf("// Delete%[1]s deletes %[2]s and it's children %[4]s and %[5]s from %[3]s.\n", m.Name, m.NameLower, m.Parent.NameLower, strings.Join(m.ChildrenNameLowers[:len(m.Children)-1], ", "), m.ChildrenNameLowers[len(m.Children)-1])
+		}
+		g.Printf("// If it can not be found, this method returns sheetdb.NotFoundError.\n")
 		g.Printf("func (m *%[2]s) Delete%[1]s(%[3]s %[4]s) error {\n", m.Name, m.Parent.Name, m.ThisKeyNameLower, m.ThisKeyType)
 	}
 
@@ -475,7 +559,13 @@ func (g *Generator) outputDelete(m model) {
 		} else {
 			g.Printf("\tfor _, v := range _%[1]s_cache[%[2]s][%[3]s] {\n", child.Name, strings.Join(prefixes(m.Parent.PkNames, "m."), "]["), m.ThisKeyNameLower)
 		}
+		for i := 0; i < len(child.PkNames)-len(m.PkNames)-1; i++ {
+			g.Printf("\tfor _, v := range v {\n")
+		}
 		g.Printf("\t\t%[1]s = append(%[1]s, v)\n", child.NameLowerPlural)
+		for i := 0; i < len(child.PkNames)-len(m.PkNames)-1; i++ {
+			g.Printf("\t}\n")
+		}
 		g.Printf("\t}\n")
 	}
 
@@ -507,6 +597,15 @@ func (g *Generator) outputDelete(m model) {
 	g.Printf("}\n\n")
 
 	if m.Parent != nil {
+		if len(m.Children) == 0 {
+			g.Printf("// Delete%[1]s deletes %[2]s from %[3]s.\n", m.Name, m.NameLower, m.Parent.NameLower)
+		} else if len(m.Children) == 1 {
+			g.Printf("// Delete%[1]s deletes %[2]s and it's children %[4]s from %[3]s.\n", m.Name, m.NameLower, m.Parent.NameLower, m.ChildrenNameLowers[0])
+		} else {
+			g.Printf("// Delete%[1]s deletes %[2]s and it's children %[4]s and %[5]s from %[3]s.\n", m.Name, m.NameLower, m.Parent.NameLower, strings.Join(m.ChildrenNameLowers[:len(m.Children)-1], ", "), m.ChildrenNameLowers[len(m.Children)-1])
+		}
+		g.Printf("// If it can not be found, this function returns sheetdb.NotFoundError.\n")
+
 		g.Printf("func Delete%[1]s(%[2]s) error {\n", m.Name, join(m.PkNameLowers, m.PkTypes, " ", ", "))
 		g.outputGetParent(*m.Parent, false, 0)
 		g.Printf("\treturn m.Delete%s(%s)\n", m.Name, m.ThisKeyNameLower)

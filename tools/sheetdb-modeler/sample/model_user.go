@@ -97,6 +97,8 @@ func _User_load(data *gsheets.Sheet) error {
 	return nil
 }
 
+// GetUser returns a user by UserID.
+// If it can not be found, this function returns sheetdb.NotFoundError.
 func GetUser(userID int) (*User, error) {
 	_User_mutex.RLock()
 	defer _User_mutex.RUnlock()
@@ -106,13 +108,16 @@ func GetUser(userID int) (*User, error) {
 	return nil, &sheetdb.NotFoundError{Model: "User"}
 }
 
+// UserQuery is used for selecting users.
 type UserQuery struct {
 	filter func(user *User) bool
 	sort   func(users []*User)
 }
 
+// UserQueryOption is an option to change the behavior of UserQuery.
 type UserQueryOption func(query *UserQuery) *UserQuery
 
+// UserFilter is an option to change the filtering behavior of UserQuery.
 func UserFilter(filterFunc func(user *User) bool) func(query *UserQuery) *UserQuery {
 	return func(query *UserQuery) *UserQuery {
 		if query != nil {
@@ -122,6 +127,7 @@ func UserFilter(filterFunc func(user *User) bool) func(query *UserQuery) *UserQu
 	}
 }
 
+// UserSort is an option to change the sorting behavior of UserQuery.
 func UserSort(sortFunc func(users []*User)) func(query *UserQuery) *UserQuery {
 	return func(query *UserQuery) *UserQuery {
 		if query != nil {
@@ -131,6 +137,9 @@ func UserSort(sortFunc func(users []*User)) func(query *UserQuery) *UserQuery {
 	}
 }
 
+// GetUsers returns all users.
+// If any options are specified, the result according to the specified option is returned.
+// If there are no user to return, this function returns an nil array.
 func GetUsers(opts ...UserQueryOption) ([]*User, error) {
 	userQuery := &UserQuery{}
 	for _, opt := range opts {
@@ -138,7 +147,7 @@ func GetUsers(opts ...UserQueryOption) ([]*User, error) {
 	}
 	_User_mutex.RLock()
 	defer _User_mutex.RUnlock()
-	users := []*User{}
+	var users []*User
 	if userQuery.filter != nil {
 		for _, v := range _User_cache {
 			if userQuery.filter(v) {
@@ -156,6 +165,9 @@ func GetUsers(opts ...UserQueryOption) ([]*User, error) {
 	return users, nil
 }
 
+// AddUser adds new user.
+// UserID is generated automatically.
+// If any fields are invalid, this function returns error.
 func AddUser(name string, email string, sex Sex, birthday *sheetdb.Date) (*User, error) {
 	_User_mutex.Lock()
 	defer _User_mutex.Unlock()
@@ -182,6 +194,9 @@ func AddUser(name string, email string, sex Sex, birthday *sheetdb.Date) (*User,
 	return user, nil
 }
 
+// UpdateUser updates user.
+// If it can not be found, this function returns sheetdb.NotFoundError.
+// If any fields are invalid, this function returns error.
 func UpdateUser(userID int, name string, email string, sex Sex, birthday *sheetdb.Date) (*User, error) {
 	_User_mutex.Lock()
 	defer _User_mutex.Unlock()
@@ -211,11 +226,15 @@ func UpdateUser(userID int, name string, email string, sex Sex, birthday *sheetd
 	return user, nil
 }
 
+// DeleteUser deletes user and it's children foo, fooChild and bar.
+// If it can not be found, this function returns sheetdb.NotFoundError.
 func DeleteUser(userID int) error {
 	_User_mutex.Lock()
 	defer _User_mutex.Unlock()
 	_Foo_mutex.Lock()
 	defer _Foo_mutex.Unlock()
+	_FooChild_mutex.Lock()
+	defer _FooChild_mutex.Unlock()
 	_Bar_mutex.Lock()
 	defer _Bar_mutex.Unlock()
 	user, ok := _User_cache[userID]
@@ -226,16 +245,23 @@ func DeleteUser(userID int) error {
 	for _, v := range _Foo_cache[userID] {
 		foos = append(foos, v)
 	}
+	var fooChildren []*FooChild
+	for _, v := range _FooChild_cache[userID] {
+		for _, v := range v {
+			fooChildren = append(fooChildren, v)
+		}
+	}
 	var bars []*Bar
 	for _, v := range _Bar_cache[userID] {
 		bars = append(bars, v)
 	}
-	if err := user._asyncDelete(foos, bars); err != nil {
+	if err := user._asyncDelete(foos, fooChildren, bars); err != nil {
 		return err
 	}
 	delete(_User_Email_uniqueSet, user.Email)
 	delete(_User_cache, userID)
 	delete(_Foo_cache, userID)
+	delete(_FooChild_cache, userID)
 	delete(_Bar_cache, userID)
 	return nil
 }
@@ -306,7 +332,7 @@ func (m *User) _asyncUpdate() error {
 	return dbClient.AsyncUpdate(data)
 }
 
-func (m *User) _asyncDelete(foos []*Foo, bars []*Bar) error {
+func (m *User) _asyncDelete(foos []*Foo, fooChildren []*FooChild, bars []*Bar) error {
 	now := time.Now()
 	data := []gsheets.UpdateValue{
 		{
@@ -332,6 +358,20 @@ func (m *User) _asyncDelete(foos []*Foo, bars []*Bar) error {
 				v.FooID,
 				v.Value,
 				v.Note,
+				now,
+				now,
+			},
+		})
+	}
+	for _, v := range fooChildren {
+		data = append(data, gsheets.UpdateValue{
+			SheetName: _FooChild_sheetName,
+			RowNo:     _FooChild_rowNoMap[v.UserID][v.FooID][v.ChildID],
+			Values: []interface{}{
+				v.UserID,
+				v.FooID,
+				v.ChildID,
+				v.Value,
 				now,
 				now,
 			},

@@ -92,22 +92,37 @@ func _Foo_load(data *gsheets.Sheet) error {
 	return nil
 }
 
-func GetFoo(userID int, fooID int) (*Foo, error) {
+// GetFoo returns a foo by FooID.
+// If it can not be found, this method returns sheetdb.NotFoundError.
+func (m *User) GetFoo(fooID int) (*Foo, error) {
 	_Foo_mutex.RLock()
 	defer _Foo_mutex.RUnlock()
-	if v, ok := _Foo_cache[userID][fooID]; ok {
+	if v, ok := _Foo_cache[m.UserID][fooID]; ok {
 		return v, nil
 	}
 	return nil, &sheetdb.NotFoundError{Model: "Foo"}
 }
 
+// GetFoo returns a foo by primary keys.
+// If it can not be found, this function returns sheetdb.NotFoundError.
+func GetFoo(userID int, fooID int) (*Foo, error) {
+	m, err := GetUser(userID)
+	if err != nil {
+		return nil, err
+	}
+	return m.GetFoo(fooID)
+}
+
+// FooQuery is used for selecting foos.
 type FooQuery struct {
 	filter func(foo *Foo) bool
 	sort   func(foos []*Foo)
 }
 
+// FooQueryOption is an option to change the behavior of FooQuery.
 type FooQueryOption func(query *FooQuery) *FooQuery
 
+// FooFilter is an option to change the filtering behavior of FooQuery.
 func FooFilter(filterFunc func(foo *Foo) bool) func(query *FooQuery) *FooQuery {
 	return func(query *FooQuery) *FooQuery {
 		if query != nil {
@@ -117,6 +132,7 @@ func FooFilter(filterFunc func(foo *Foo) bool) func(query *FooQuery) *FooQuery {
 	}
 }
 
+// FooSort is an option to change the sorting behavior of FooQuery.
 func FooSort(sortFunc func(foos []*Foo)) func(query *FooQuery) *FooQuery {
 	return func(query *FooQuery) *FooQuery {
 		if query != nil {
@@ -126,22 +142,25 @@ func FooSort(sortFunc func(foos []*Foo)) func(query *FooQuery) *FooQuery {
 	}
 }
 
-func GetFoos(userID int, opts ...FooQueryOption) ([]*Foo, error) {
+// GetFoos returns all foos that user has.
+// If any options are specified, the result according to the specified option is returned.
+// If there are no foo to return, this method returns an nil array.
+func (m *User) GetFoos(opts ...FooQueryOption) ([]*Foo, error) {
 	fooQuery := &FooQuery{}
 	for _, opt := range opts {
 		fooQuery = opt(fooQuery)
 	}
 	_Foo_mutex.RLock()
 	defer _Foo_mutex.RUnlock()
-	foos := []*Foo{}
+	var foos []*Foo
 	if fooQuery.filter != nil {
-		for _, v := range _Foo_cache[userID] {
+		for _, v := range _Foo_cache[m.UserID] {
 			if fooQuery.filter(v) {
 				foos = append(foos, v)
 			}
 		}
 	} else {
-		for _, v := range _Foo_cache[userID] {
+		for _, v := range _Foo_cache[m.UserID] {
 			foos = append(foos, v)
 		}
 	}
@@ -151,6 +170,20 @@ func GetFoos(userID int, opts ...FooQueryOption) ([]*Foo, error) {
 	return foos, nil
 }
 
+// GetFoos returns all foos that user has.
+// If any options are specified, the result according to the specified option is returned.
+// If there are no foo to return, this function returns an nil array.
+func GetFoos(userID int, opts ...FooQueryOption) ([]*Foo, error) {
+	m, err := GetUser(userID)
+	if err != nil {
+		return nil, err
+	}
+	return m.GetFoos(opts...)
+}
+
+// AddFoo adds new foo to user.
+// FooID is generated automatically.
+// If any fields are invalid, this method returns error.
 func (m *User) AddFoo(value float32, note string) (*Foo, error) {
 	_Foo_mutex.Lock()
 	defer _Foo_mutex.Unlock()
@@ -175,6 +208,9 @@ func (m *User) AddFoo(value float32, note string) (*Foo, error) {
 	return foo, nil
 }
 
+// AddFoo adds new foo to user.
+// FooID is generated automatically.
+// If any fields are invalid, this function returns error.
 func AddFoo(userID int, value float32, note string) (*Foo, error) {
 	m, err := GetUser(userID)
 	if err != nil {
@@ -183,6 +219,9 @@ func AddFoo(userID int, value float32, note string) (*Foo, error) {
 	return m.AddFoo(value, note)
 }
 
+// UpdateFoo updates foo.
+// If it can not be found, this method returns sheetdb.NotFoundError.
+// If any fields are invalid, this method returns error.
 func (m *User) UpdateFoo(fooID int, value float32, note string) (*Foo, error) {
 	_Foo_mutex.Lock()
 	defer _Foo_mutex.Unlock()
@@ -203,6 +242,9 @@ func (m *User) UpdateFoo(fooID int, value float32, note string) (*Foo, error) {
 	return foo, nil
 }
 
+// UpdateFoo updates foo.
+// If it can not be found, this function returns sheetdb.NotFoundError.
+// If any fields are invalid, this function returns error.
 func UpdateFoo(userID int, fooID int, value float32, note string) (*Foo, error) {
 	m, err := GetUser(userID)
 	if err != nil {
@@ -211,6 +253,8 @@ func UpdateFoo(userID int, fooID int, value float32, note string) (*Foo, error) 
 	return m.UpdateFoo(fooID, value, note)
 }
 
+// DeleteFoo deletes foo and it's children fooChild from user.
+// If it can not be found, this method returns sheetdb.NotFoundError.
 func (m *User) DeleteFoo(fooID int) error {
 	_Foo_mutex.Lock()
 	defer _Foo_mutex.Unlock()
@@ -232,6 +276,8 @@ func (m *User) DeleteFoo(fooID int) error {
 	return nil
 }
 
+// DeleteFoo deletes foo and it's children fooChild from user.
+// If it can not be found, this function returns sheetdb.NotFoundError.
 func DeleteFoo(userID int, fooID int) error {
 	m, err := GetUser(userID)
 	if err != nil {

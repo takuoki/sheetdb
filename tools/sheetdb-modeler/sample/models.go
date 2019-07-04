@@ -6,7 +6,7 @@ import (
 
 var dbClient *sheetdb.Client
 
-//go:generate sheetdb-modeler -type=User -children=Foo,Bar -initial=10001
+//go:generate sheetdb-modeler -type=User -children=Foo,FooChild,Bar -initial=10001
 
 // User is a struct of user.
 type User struct {

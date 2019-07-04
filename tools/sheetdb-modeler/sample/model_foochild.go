@@ -95,22 +95,37 @@ func _FooChild_load(data *gsheets.Sheet) error {
 	return nil
 }
 
-func GetFooChild(userID int, fooID int, childID int) (*FooChild, error) {
+// GetFooChild returns a fooChild by ChildID.
+// If it can not be found, this method returns sheetdb.NotFoundError.
+func (m *Foo) GetFooChild(childID int) (*FooChild, error) {
 	_FooChild_mutex.RLock()
 	defer _FooChild_mutex.RUnlock()
-	if v, ok := _FooChild_cache[userID][fooID][childID]; ok {
+	if v, ok := _FooChild_cache[m.UserID][m.FooID][childID]; ok {
 		return v, nil
 	}
 	return nil, &sheetdb.NotFoundError{Model: "FooChild"}
 }
 
+// GetFooChild returns a fooChild by primary keys.
+// If it can not be found, this function returns sheetdb.NotFoundError.
+func GetFooChild(userID int, fooID int, childID int) (*FooChild, error) {
+	m, err := GetFoo(userID, fooID)
+	if err != nil {
+		return nil, err
+	}
+	return m.GetFooChild(childID)
+}
+
+// FooChildQuery is used for selecting fooChildren.
 type FooChildQuery struct {
 	filter func(fooChild *FooChild) bool
 	sort   func(fooChildren []*FooChild)
 }
 
+// FooChildQueryOption is an option to change the behavior of FooChildQuery.
 type FooChildQueryOption func(query *FooChildQuery) *FooChildQuery
 
+// FooChildFilter is an option to change the filtering behavior of FooChildQuery.
 func FooChildFilter(filterFunc func(fooChild *FooChild) bool) func(query *FooChildQuery) *FooChildQuery {
 	return func(query *FooChildQuery) *FooChildQuery {
 		if query != nil {
@@ -120,6 +135,7 @@ func FooChildFilter(filterFunc func(fooChild *FooChild) bool) func(query *FooChi
 	}
 }
 
+// FooChildSort is an option to change the sorting behavior of FooChildQuery.
 func FooChildSort(sortFunc func(fooChildren []*FooChild)) func(query *FooChildQuery) *FooChildQuery {
 	return func(query *FooChildQuery) *FooChildQuery {
 		if query != nil {
@@ -129,22 +145,25 @@ func FooChildSort(sortFunc func(fooChildren []*FooChild)) func(query *FooChildQu
 	}
 }
 
-func GetFooChildren(userID int, fooID int, opts ...FooChildQueryOption) ([]*FooChild, error) {
+// GetFooChildren returns all fooChildren that foo has.
+// If any options are specified, the result according to the specified option is returned.
+// If there are no fooChild to return, this method returns an nil array.
+func (m *Foo) GetFooChildren(opts ...FooChildQueryOption) ([]*FooChild, error) {
 	fooChildQuery := &FooChildQuery{}
 	for _, opt := range opts {
 		fooChildQuery = opt(fooChildQuery)
 	}
 	_FooChild_mutex.RLock()
 	defer _FooChild_mutex.RUnlock()
-	fooChildren := []*FooChild{}
+	var fooChildren []*FooChild
 	if fooChildQuery.filter != nil {
-		for _, v := range _FooChild_cache[userID][fooID] {
+		for _, v := range _FooChild_cache[m.UserID][m.FooID] {
 			if fooChildQuery.filter(v) {
 				fooChildren = append(fooChildren, v)
 			}
 		}
 	} else {
-		for _, v := range _FooChild_cache[userID][fooID] {
+		for _, v := range _FooChild_cache[m.UserID][m.FooID] {
 			fooChildren = append(fooChildren, v)
 		}
 	}
@@ -154,6 +173,20 @@ func GetFooChildren(userID int, fooID int, opts ...FooChildQueryOption) ([]*FooC
 	return fooChildren, nil
 }
 
+// GetFooChildren returns all fooChildren that foo has.
+// If any options are specified, the result according to the specified option is returned.
+// If there are no fooChild to return, this function returns an nil array.
+func GetFooChildren(userID int, fooID int, opts ...FooChildQueryOption) ([]*FooChild, error) {
+	m, err := GetFoo(userID, fooID)
+	if err != nil {
+		return nil, err
+	}
+	return m.GetFooChildren(opts...)
+}
+
+// AddFooChild adds new fooChild to foo.
+// ChildID is generated automatically.
+// If any fields are invalid, this method returns error.
 func (m *Foo) AddFooChild(value float32) (*FooChild, error) {
 	_FooChild_mutex.Lock()
 	defer _FooChild_mutex.Unlock()
@@ -178,6 +211,9 @@ func (m *Foo) AddFooChild(value float32) (*FooChild, error) {
 	return fooChild, nil
 }
 
+// AddFooChild adds new fooChild to foo.
+// ChildID is generated automatically.
+// If any fields are invalid, this function returns error.
 func AddFooChild(userID int, fooID int, value float32) (*FooChild, error) {
 	m, err := GetFoo(userID, fooID)
 	if err != nil {
@@ -186,6 +222,9 @@ func AddFooChild(userID int, fooID int, value float32) (*FooChild, error) {
 	return m.AddFooChild(value)
 }
 
+// UpdateFooChild updates fooChild.
+// If it can not be found, this method returns sheetdb.NotFoundError.
+// If any fields are invalid, this method returns error.
 func (m *Foo) UpdateFooChild(childID int, value float32) (*FooChild, error) {
 	_FooChild_mutex.Lock()
 	defer _FooChild_mutex.Unlock()
@@ -202,6 +241,9 @@ func (m *Foo) UpdateFooChild(childID int, value float32) (*FooChild, error) {
 	return fooChild, nil
 }
 
+// UpdateFooChild updates fooChild.
+// If it can not be found, this function returns sheetdb.NotFoundError.
+// If any fields are invalid, this function returns error.
 func UpdateFooChild(userID int, fooID int, childID int, value float32) (*FooChild, error) {
 	m, err := GetFoo(userID, fooID)
 	if err != nil {
@@ -210,6 +252,8 @@ func UpdateFooChild(userID int, fooID int, childID int, value float32) (*FooChil
 	return m.UpdateFooChild(childID, value)
 }
 
+// DeleteFooChild deletes fooChild from foo.
+// If it can not be found, this method returns sheetdb.NotFoundError.
 func (m *Foo) DeleteFooChild(childID int) error {
 	_FooChild_mutex.Lock()
 	defer _FooChild_mutex.Unlock()
@@ -224,6 +268,8 @@ func (m *Foo) DeleteFooChild(childID int) error {
 	return nil
 }
 
+// DeleteFooChild deletes fooChild from foo.
+// If it can not be found, this function returns sheetdb.NotFoundError.
 func DeleteFooChild(userID int, fooID int, childID int) error {
 	m, err := GetFoo(userID, fooID)
 	if err != nil {

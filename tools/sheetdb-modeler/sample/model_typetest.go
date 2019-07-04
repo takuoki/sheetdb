@@ -257,6 +257,8 @@ func _TypeTest_load(data *gsheets.Sheet) error {
 	return nil
 }
 
+// GetTypeTest returns a typeTest by ID.
+// If it can not be found, this function returns sheetdb.NotFoundError.
 func GetTypeTest(id int) (*TypeTest, error) {
 	_TypeTest_mutex.RLock()
 	defer _TypeTest_mutex.RUnlock()
@@ -266,13 +268,16 @@ func GetTypeTest(id int) (*TypeTest, error) {
 	return nil, &sheetdb.NotFoundError{Model: "TypeTest"}
 }
 
+// TypeTestQuery is used for selecting typeTests.
 type TypeTestQuery struct {
 	filter func(typeTest *TypeTest) bool
 	sort   func(typeTests []*TypeTest)
 }
 
+// TypeTestQueryOption is an option to change the behavior of TypeTestQuery.
 type TypeTestQueryOption func(query *TypeTestQuery) *TypeTestQuery
 
+// TypeTestFilter is an option to change the filtering behavior of TypeTestQuery.
 func TypeTestFilter(filterFunc func(typeTest *TypeTest) bool) func(query *TypeTestQuery) *TypeTestQuery {
 	return func(query *TypeTestQuery) *TypeTestQuery {
 		if query != nil {
@@ -282,6 +287,7 @@ func TypeTestFilter(filterFunc func(typeTest *TypeTest) bool) func(query *TypeTe
 	}
 }
 
+// TypeTestSort is an option to change the sorting behavior of TypeTestQuery.
 func TypeTestSort(sortFunc func(typeTests []*TypeTest)) func(query *TypeTestQuery) *TypeTestQuery {
 	return func(query *TypeTestQuery) *TypeTestQuery {
 		if query != nil {
@@ -291,6 +297,9 @@ func TypeTestSort(sortFunc func(typeTests []*TypeTest)) func(query *TypeTestQuer
 	}
 }
 
+// GetTypeTests returns all typeTests.
+// If any options are specified, the result according to the specified option is returned.
+// If there are no typeTest to return, this function returns an nil array.
 func GetTypeTests(opts ...TypeTestQueryOption) ([]*TypeTest, error) {
 	typeTestQuery := &TypeTestQuery{}
 	for _, opt := range opts {
@@ -298,7 +307,7 @@ func GetTypeTests(opts ...TypeTestQueryOption) ([]*TypeTest, error) {
 	}
 	_TypeTest_mutex.RLock()
 	defer _TypeTest_mutex.RUnlock()
-	typeTests := []*TypeTest{}
+	var typeTests []*TypeTest
 	if typeTestQuery.filter != nil {
 		for _, v := range _TypeTest_cache {
 			if typeTestQuery.filter(v) {
@@ -316,6 +325,9 @@ func GetTypeTests(opts ...TypeTestQueryOption) ([]*TypeTest, error) {
 	return typeTests, nil
 }
 
+// AddTypeTest adds new typeTest.
+// ID is generated automatically.
+// If any fields are invalid, this function returns error.
 func AddTypeTest(stringValue string, boolValue bool, intValue int, int8Value int8, int16Value int16, int32Value int32, int64Value int64, uintValue uint, uint8Value uint8, uint16Value uint16, uint32Value uint32, uint64Value uint64, float32Value float32, float64Value float64, dateValue sheetdb.Date, datetimeValue sheetdb.Datetime, pBoolValue *bool, pIntValue *int, pInt8Value *int8, pInt16Value *int16, pInt32Value *int32, pInt64Value *int64, pUIntValue *uint, pUInt8Value *uint8, pUInt16Value *uint16, pUInt32Value *uint32, pUInt64Value *uint64, pFloat32Value *float32, pFloat64Value *float64, pDateValue *sheetdb.Date, pDatetimeValue *sheetdb.Datetime) (*TypeTest, error) {
 	_TypeTest_mutex.Lock()
 	defer _TypeTest_mutex.Unlock()
@@ -365,6 +377,9 @@ func AddTypeTest(stringValue string, boolValue bool, intValue int, int8Value int
 	return typeTest, nil
 }
 
+// UpdateTypeTest updates typeTest.
+// If it can not be found, this function returns sheetdb.NotFoundError.
+// If any fields are invalid, this function returns error.
 func UpdateTypeTest(id int, stringValue string, boolValue bool, intValue int, int8Value int8, int16Value int16, int32Value int32, int64Value int64, uintValue uint, uint8Value uint8, uint16Value uint16, uint32Value uint32, uint64Value uint64, float32Value float32, float64Value float64, dateValue sheetdb.Date, datetimeValue sheetdb.Datetime, pBoolValue *bool, pIntValue *int, pInt8Value *int8, pInt16Value *int16, pInt32Value *int32, pInt64Value *int64, pUIntValue *uint, pUInt8Value *uint8, pUInt16Value *uint16, pUInt32Value *uint32, pUInt64Value *uint64, pFloat32Value *float32, pFloat64Value *float64, pDateValue *sheetdb.Date, pDatetimeValue *sheetdb.Datetime) (*TypeTest, error) {
 	_TypeTest_mutex.Lock()
 	defer _TypeTest_mutex.Unlock()
@@ -414,6 +429,8 @@ func UpdateTypeTest(id int, stringValue string, boolValue bool, intValue int, in
 	return typeTest, nil
 }
 
+// DeleteTypeTest deletes typeTest.
+// If it can not be found, this function returns sheetdb.NotFoundError.
 func DeleteTypeTest(id int) error {
 	_TypeTest_mutex.Lock()
 	defer _TypeTest_mutex.Unlock()
