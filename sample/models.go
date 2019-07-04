@@ -18,11 +18,11 @@ func Initialize() error {
 	if err != nil {
 		return err
 	}
-	dbClient = client
-	err = dbClient.LoadData(ctx)
+	err = client.LoadData(ctx)
 	if err != nil {
 		return err
 	}
+	dbClient = client
 	return nil
 }
 
