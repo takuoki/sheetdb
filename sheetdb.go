@@ -21,8 +21,9 @@ type Client struct {
 }
 
 type model struct {
-	name     string
-	loadFunc func(data *gsheets.Sheet) error
+	name      string
+	sheetName string
+	loadFunc  func(data *gsheets.Sheet) error
 }
 
 type ClientOption func(client *Client) *Client
@@ -68,12 +69,16 @@ func New(ctx context.Context, credentials, token, spreadsheetID string, opts ...
 	return client, nil
 }
 
-func SetModel(modelSetName, modelName string, loadFunc func(data *gsheets.Sheet) error) {
-	m := model{name: modelName, loadFunc: loadFunc}
+func SetModel(modelSetName, modelName, sheetName string, loadFunc func(data *gsheets.Sheet) error) {
+	m := model{
+		name:      modelName,
+		sheetName: sheetName,
+		loadFunc:  loadFunc,
+	}
 	if s, ok := modelSets[modelSetName]; ok {
-		s = append(s, m)
+		modelSets[modelSetName] = append(s, m)
 	} else {
-		s = []model{m}
+		modelSets[modelSetName] = []model{m}
 	}
 }
 
@@ -84,7 +89,7 @@ func (c *Client) LoadData(ctx context.Context) error {
 	}
 
 	for _, m := range c.models {
-		data, err := c.gsClient.GetSheet(ctx, c.spreadsheetID, m.name)
+		data, err := c.gsClient.GetSheet(ctx, c.spreadsheetID, m.sheetName)
 		if err != nil {
 			return err
 		}

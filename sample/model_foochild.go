@@ -29,11 +29,11 @@ var (
 	_FooChild_mutex    = sync.RWMutex{}
 	_FooChild_cache    = map[int]map[int]map[int]*FooChild{} // map[userID][fooID][childID]*FooChild
 	_FooChild_rowNoMap = map[int]map[int]map[int]int{}       // map[userID][fooID][childID]rowNo
-	_FooChild_maxRowNo int
+	_FooChild_maxRowNo = 0
 )
 
 func init() {
-	sheetdb.SetModel("default", "FooChild", _FooChild_load)
+	sheetdb.SetModel("default", "FooChild", _FooChild_sheetName, _FooChild_load)
 }
 
 func _FooChild_load(data *gsheets.Sheet) error {
@@ -84,9 +84,11 @@ func _FooChild_load(data *gsheets.Sheet) error {
 		_FooChild_maxRowNo++
 		if _, ok := _FooChild_cache[fooChild.UserID]; !ok {
 			_FooChild_cache[fooChild.UserID] = map[int]map[int]*FooChild{}
+			_FooChild_rowNoMap[fooChild.UserID] = map[int]map[int]int{}
 		}
 		if _, ok := _FooChild_cache[fooChild.UserID][fooChild.FooID]; !ok {
 			_FooChild_cache[fooChild.UserID][fooChild.FooID] = map[int]*FooChild{}
+			_FooChild_rowNoMap[fooChild.UserID][fooChild.FooID] = map[int]int{}
 		}
 		_FooChild_cache[fooChild.UserID][fooChild.FooID][fooChild.ChildID] = &fooChild
 		_FooChild_rowNoMap[fooChild.UserID][fooChild.FooID][fooChild.ChildID] = _FooChild_maxRowNo
@@ -196,15 +198,17 @@ func (m *Foo) AddFooChild(value float32) (*FooChild, error) {
 		ChildID: _FooChild_maxRowNo + 1,
 		Value:   value,
 	}
-	if err := fooChild._asyncUpdate(); err != nil {
+	if err := fooChild._asyncAdd(_FooChild_maxRowNo + 1); err != nil {
 		return nil, err
 	}
 	_FooChild_maxRowNo++
 	if _, ok := _FooChild_cache[fooChild.UserID]; !ok {
 		_FooChild_cache[fooChild.UserID] = map[int]map[int]*FooChild{}
+		_FooChild_rowNoMap[fooChild.UserID] = map[int]map[int]int{}
 	}
 	if _, ok := _FooChild_cache[fooChild.UserID][fooChild.FooID]; !ok {
 		_FooChild_cache[fooChild.UserID][fooChild.FooID] = map[int]*FooChild{}
+		_FooChild_rowNoMap[fooChild.UserID][fooChild.FooID] = map[int]int{}
 	}
 	_FooChild_cache[fooChild.UserID][fooChild.FooID][fooChild.ChildID] = fooChild
 	_FooChild_rowNoMap[fooChild.UserID][fooChild.FooID][fooChild.ChildID] = _FooChild_maxRowNo
@@ -308,6 +312,24 @@ func _FooChild_parseValue(value string) (float32, error) {
 		return 0, &sheetdb.InvalidValueError{FieldName: "Value", Err: err}
 	}
 	return float32(v), nil
+}
+
+func (m *FooChild) _asyncAdd(rowNo int) error {
+	data := []gsheets.UpdateValue{
+		{
+			SheetName: _FooChild_sheetName,
+			RowNo:     rowNo,
+			Values: []interface{}{
+				m.UserID,
+				m.FooID,
+				m.ChildID,
+				m.Value,
+				time.Now(),
+				"",
+			},
+		},
+	}
+	return dbClient.AsyncUpdate(data)
 }
 
 func (m *FooChild) _asyncUpdate() error {

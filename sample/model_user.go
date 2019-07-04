@@ -30,12 +30,12 @@ var (
 	_User_mutex           = sync.RWMutex{}
 	_User_cache           = map[int]*User{} // map[userID]*User
 	_User_rowNoMap        = map[int]int{}   // map[userID]rowNo
-	_User_maxRowNo        int
+	_User_maxRowNo        = 0
 	_User_Email_uniqueSet = map[string]struct{}{}
 )
 
 func init() {
-	sheetdb.SetModel("default", "User", _User_load)
+	sheetdb.SetModel("default", "User", _User_sheetName, _User_load)
 }
 
 func _User_load(data *gsheets.Sheet) error {
@@ -184,7 +184,7 @@ func AddUser(name string, email string, sex Sex, birthday *sheetdb.Date) (*User,
 		Sex:      sex,
 		Birthday: birthday,
 	}
-	if err := user._asyncUpdate(); err != nil {
+	if err := user._asyncAdd(_User_maxRowNo + 1); err != nil {
 		return nil, err
 	}
 	_User_Email_uniqueSet[user.Email] = struct{}{}
@@ -311,6 +311,25 @@ func _User_parseBirthday(birthday string) (*sheetdb.Date, error) {
 		val = &v
 	}
 	return val, nil
+}
+
+func (m *User) _asyncAdd(rowNo int) error {
+	data := []gsheets.UpdateValue{
+		{
+			SheetName: _User_sheetName,
+			RowNo:     rowNo,
+			Values: []interface{}{
+				m.UserID,
+				m.Name,
+				m.Email,
+				m.Sex.String(),
+				m.Birthday.String(),
+				time.Now(),
+				"",
+			},
+		},
+	}
+	return dbClient.AsyncUpdate(data)
 }
 
 func (m *User) _asyncUpdate() error {

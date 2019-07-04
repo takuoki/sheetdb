@@ -57,11 +57,11 @@ var (
 	_TypeTest_mutex    = sync.RWMutex{}
 	_TypeTest_cache    = map[int]*TypeTest{} // map[id]*TypeTest
 	_TypeTest_rowNoMap = map[int]int{}       // map[id]rowNo
-	_TypeTest_maxRowNo int
+	_TypeTest_maxRowNo = 0
 )
 
 func init() {
-	sheetdb.SetModel("default", "TypeTest", _TypeTest_load)
+	sheetdb.SetModel("default", "TypeTest", _TypeTest_sheetName, _TypeTest_load)
 }
 
 func _TypeTest_load(data *gsheets.Sheet) error {
@@ -368,7 +368,7 @@ func AddTypeTest(stringValue string, boolValue bool, intValue int, int8Value int
 		PDateValue:     pDateValue,
 		PDatetimeValue: pDatetimeValue,
 	}
-	if err := typeTest._asyncUpdate(); err != nil {
+	if err := typeTest._asyncAdd(_TypeTest_maxRowNo + 1); err != nil {
 		return nil, err
 	}
 	_TypeTest_maxRowNo++
@@ -767,6 +767,52 @@ func _TypeTest_parsePDatetimeValue(pDatetimeValue string) (*sheetdb.Datetime, er
 		val = &v
 	}
 	return val, nil
+}
+
+func (m *TypeTest) _asyncAdd(rowNo int) error {
+	data := []gsheets.UpdateValue{
+		{
+			SheetName: _TypeTest_sheetName,
+			RowNo:     rowNo,
+			Values: []interface{}{
+				m.ID,
+				m.StringValue,
+				m.BoolValue,
+				m.IntValue,
+				m.Int8Value,
+				m.Int16Value,
+				m.Int32Value,
+				m.Int64Value,
+				m.UintValue,
+				m.Uint8Value,
+				m.Uint16Value,
+				m.Uint32Value,
+				m.Uint64Value,
+				m.Float32Value,
+				m.Float64Value,
+				m.DateValue.String(),
+				m.DatetimeValue.String(),
+				m.PBoolValue,
+				m.PIntValue,
+				m.PInt8Value,
+				m.PInt16Value,
+				m.PInt32Value,
+				m.PInt64Value,
+				m.PUintValue,
+				m.PUint8Value,
+				m.PUint16Value,
+				m.PUint32Value,
+				m.PUint64Value,
+				m.PFloat32Value,
+				m.PFloat64Value,
+				m.PDateValue.String(),
+				m.PDatetimeValue.String(),
+				time.Now(),
+				"",
+			},
+		},
+	}
+	return dbClient.AsyncUpdate(data)
 }
 
 func (m *TypeTest) _asyncUpdate() error {

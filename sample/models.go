@@ -19,7 +19,10 @@ func Initialize() error {
 		return err
 	}
 	dbClient = client
-	dbClient.LoadData(ctx)
+	err = dbClient.LoadData(ctx)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

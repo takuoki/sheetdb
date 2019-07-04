@@ -29,11 +29,11 @@ var (
 	_Foo_mutex    = sync.RWMutex{}
 	_Foo_cache    = map[int]map[int]*Foo{} // map[userID][fooID]*Foo
 	_Foo_rowNoMap = map[int]map[int]int{}  // map[userID][fooID]rowNo
-	_Foo_maxRowNo int
+	_Foo_maxRowNo = 0
 )
 
 func init() {
-	sheetdb.SetModel("default", "Foo", _Foo_load)
+	sheetdb.SetModel("default", "Foo", _Foo_sheetName, _Foo_load)
 }
 
 func _Foo_load(data *gsheets.Sheet) error {
@@ -84,6 +84,7 @@ func _Foo_load(data *gsheets.Sheet) error {
 		_Foo_maxRowNo++
 		if _, ok := _Foo_cache[foo.UserID]; !ok {
 			_Foo_cache[foo.UserID] = map[int]*Foo{}
+			_Foo_rowNoMap[foo.UserID] = map[int]int{}
 		}
 		_Foo_cache[foo.UserID][foo.FooID] = &foo
 		_Foo_rowNoMap[foo.UserID][foo.FooID] = _Foo_maxRowNo
@@ -196,12 +197,13 @@ func (m *User) AddFoo(value float32, note string) (*Foo, error) {
 		Value:  value,
 		Note:   note,
 	}
-	if err := foo._asyncUpdate(); err != nil {
+	if err := foo._asyncAdd(_Foo_maxRowNo + 1); err != nil {
 		return nil, err
 	}
 	_Foo_maxRowNo++
 	if _, ok := _Foo_cache[foo.UserID]; !ok {
 		_Foo_cache[foo.UserID] = map[int]*Foo{}
+		_Foo_rowNoMap[foo.UserID] = map[int]int{}
 	}
 	_Foo_cache[foo.UserID][foo.FooID] = foo
 	_Foo_rowNoMap[foo.UserID][foo.FooID] = _Foo_maxRowNo
@@ -312,6 +314,24 @@ func _Foo_parseValue(value string) (float32, error) {
 		return 0, &sheetdb.InvalidValueError{FieldName: "Value", Err: err}
 	}
 	return float32(v), nil
+}
+
+func (m *Foo) _asyncAdd(rowNo int) error {
+	data := []gsheets.UpdateValue{
+		{
+			SheetName: _Foo_sheetName,
+			RowNo:     rowNo,
+			Values: []interface{}{
+				m.UserID,
+				m.FooID,
+				m.Value,
+				m.Note,
+				time.Now(),
+				"",
+			},
+		},
+	}
+	return dbClient.AsyncUpdate(data)
 }
 
 func (m *Foo) _asyncUpdate() error {

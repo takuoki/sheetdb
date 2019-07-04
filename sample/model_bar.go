@@ -29,11 +29,11 @@ var (
 	_Bar_mutex    = sync.RWMutex{}
 	_Bar_cache    = map[int]map[sheetdb.Datetime]*Bar{} // map[userID][datetime]*Bar
 	_Bar_rowNoMap = map[int]map[sheetdb.Datetime]int{}  // map[userID][datetime]rowNo
-	_Bar_maxRowNo int
+	_Bar_maxRowNo = 0
 )
 
 func init() {
-	sheetdb.SetModel("default", "Bar", _Bar_load)
+	sheetdb.SetModel("default", "Bar", _Bar_sheetName, _Bar_load)
 }
 
 func _Bar_load(data *gsheets.Sheet) error {
@@ -84,6 +84,7 @@ func _Bar_load(data *gsheets.Sheet) error {
 		_Bar_maxRowNo++
 		if _, ok := _Bar_cache[bar.UserID]; !ok {
 			_Bar_cache[bar.UserID] = map[sheetdb.Datetime]*Bar{}
+			_Bar_rowNoMap[bar.UserID] = map[sheetdb.Datetime]int{}
 		}
 		_Bar_cache[bar.UserID][bar.Datetime] = &bar
 		_Bar_rowNoMap[bar.UserID][bar.Datetime] = _Bar_maxRowNo
@@ -199,12 +200,13 @@ func (m *User) AddBar(datetime sheetdb.Datetime, value float32, note string) (*B
 		Value:    value,
 		Note:     note,
 	}
-	if err := bar._asyncUpdate(); err != nil {
+	if err := bar._asyncAdd(_Bar_maxRowNo + 1); err != nil {
 		return nil, err
 	}
 	_Bar_maxRowNo++
 	if _, ok := _Bar_cache[bar.UserID]; !ok {
 		_Bar_cache[bar.UserID] = map[sheetdb.Datetime]*Bar{}
+		_Bar_rowNoMap[bar.UserID] = map[sheetdb.Datetime]int{}
 	}
 	_Bar_cache[bar.UserID][bar.Datetime] = bar
 	_Bar_rowNoMap[bar.UserID][bar.Datetime] = _Bar_maxRowNo
@@ -308,6 +310,24 @@ func _Bar_parseValue(value string) (float32, error) {
 		return 0, &sheetdb.InvalidValueError{FieldName: "Value", Err: err}
 	}
 	return float32(v), nil
+}
+
+func (m *Bar) _asyncAdd(rowNo int) error {
+	data := []gsheets.UpdateValue{
+		{
+			SheetName: _Bar_sheetName,
+			RowNo:     rowNo,
+			Values: []interface{}{
+				m.UserID,
+				m.Datetime.String(),
+				m.Value,
+				m.Note,
+				time.Now(),
+				"",
+			},
+		},
+	}
+	return dbClient.AsyncUpdate(data)
 }
 
 func (m *Bar) _asyncUpdate() error {
