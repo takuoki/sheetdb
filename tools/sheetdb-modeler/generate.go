@@ -36,8 +36,9 @@ type model struct {
 }
 
 type option struct {
-	ClientName string
-	Initial    int
+	ClientName   string
+	ModelSetName string
+	Initial      int
 }
 
 type field struct {
@@ -54,7 +55,7 @@ type field struct {
 	Unique        bool
 }
 
-func (g *Generator) generate(typeName, parentName, childrenNames, clientName string, initialNum int) {
+func (g *Generator) generate(typeName, parentName, childrenNames, clientName, modelSetName string, initialNum int) {
 	s := search{
 		Typ:    typeName,
 		Parent: parentName,
@@ -93,8 +94,9 @@ func (g *Generator) generate(typeName, parentName, childrenNames, clientName str
 	// TODO: validation
 
 	g.output(*s.Model, option{
-		ClientName: clientName,
-		Initial:    initialNum,
+		ClientName:   clientName,
+		ModelSetName: modelSetName,
+		Initial:      initialNum,
 	})
 }
 

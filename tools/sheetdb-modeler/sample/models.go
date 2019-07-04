@@ -1,10 +1,27 @@
 package sample
 
 import (
+	"context"
+	"os"
+
 	"github.com/takuoki/sheetdb"
 )
 
+const sheetID string = "1dIxSIUM1vqehzt7gRz6Qi-UUlxeyl657ma88bfySs3E"
+
 var dbClient *sheetdb.Client
+
+// Initialize initializes this package.
+func Initialize() error {
+	ctx := context.Background()
+	client, err := sheetdb.New(ctx, os.Getenv("GOOGLE_API_CREDENTIALS"), os.Getenv("GOOGLE_API_TOKEN"), sheetID)
+	if err != nil {
+		return err
+	}
+	dbClient = client
+	dbClient.LoadData(ctx)
+	return nil
+}
 
 //go:generate sheetdb-modeler -type=User -children=Foo,FooChild,Bar -initial=10001
 

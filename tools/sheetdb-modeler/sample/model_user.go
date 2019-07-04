@@ -35,7 +35,7 @@ var (
 )
 
 func init() {
-	dbClient.AddModel("User", _User_load)
+	sheetdb.SetModel("default", "User", _User_load)
 }
 
 func _User_load(data *gsheets.Sheet) error {

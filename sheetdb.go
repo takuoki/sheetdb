@@ -9,11 +9,15 @@ import (
 	"github.com/takuoki/gsheets"
 )
 
+var modelSets = map[string][]model{}
+
 type Client struct {
 	gsClient      *gsheets.Client
 	spreadsheetID string
-	models        []model
+	modelSetName  string
 	warningFunc   func([]gsheets.UpdateValue, interface{})
+
+	models []model
 }
 
 type model struct {
@@ -22,6 +26,15 @@ type model struct {
 }
 
 type ClientOption func(client *Client) *Client
+
+func ModelSetName(modelSetName string) func(client *Client) *Client {
+	return func(client *Client) *Client {
+		if client != nil {
+			client.modelSetName = modelSetName
+		}
+		return client
+	}
+}
 
 func WarningFunc(f func([]gsheets.UpdateValue, interface{})) func(client *Client) *Client {
 	return func(client *Client) *Client {
@@ -45,16 +58,23 @@ func New(ctx context.Context, credentials, token, spreadsheetID string, opts ...
 	client := &Client{
 		gsClient:      gsClient,
 		spreadsheetID: spreadsheetID,
+		modelSetName:  "default",
 		warningFunc:   defaultWarningFunc,
 	}
 	for _, opt := range opts {
 		client = opt(client)
 	}
+	client.models = modelSets[client.modelSetName]
 	return client, nil
 }
 
-func (c *Client) AddModel(name string, loadFunc func(data *gsheets.Sheet) error) {
-	c.models = append(c.models, model{name: name, loadFunc: loadFunc})
+func SetModel(modelSetName, modelName string, loadFunc func(data *gsheets.Sheet) error) {
+	m := model{name: modelName, loadFunc: loadFunc}
+	if s, ok := modelSets[modelSetName]; ok {
+		s = append(s, m)
+	} else {
+		s = []model{m}
+	}
 }
 
 func (c *Client) LoadData(ctx context.Context) error {

@@ -33,7 +33,7 @@ var (
 )
 
 func init() {
-	dbClient.AddModel("Foo", _Foo_load)
+	sheetdb.SetModel("default", "Foo", _Foo_load)
 }
 
 func _Foo_load(data *gsheets.Sheet) error {

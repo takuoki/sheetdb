@@ -89,7 +89,7 @@ func (g *Generator) outputVar(m model) {
 
 func (g *Generator) outputInit(m model, o option) {
 	g.Printf("func init() {\n")
-	g.Printf("\t%[1]s.AddModel(\"%[2]s\", _%[2]s_load)\n", o.ClientName, m.Name)
+	g.Printf("\tsheetdb.SetModel(\"%[1]s\", \"%[2]s\", _%[2]s_load)\n", o.ModelSetName, m.Name)
 	g.Printf("}\n\n")
 }
 

@@ -61,7 +61,7 @@ var (
 )
 
 func init() {
-	dbClient.AddModel("TypeTest", _TypeTest_load)
+	sheetdb.SetModel("default", "TypeTest", _TypeTest_load)
 }
 
 func _TypeTest_load(data *gsheets.Sheet) error {
