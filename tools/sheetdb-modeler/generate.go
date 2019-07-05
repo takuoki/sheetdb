@@ -91,13 +91,17 @@ func (g *Generator) generate(typeName, parentName, childrenNames, clientName, mo
 		s.Model.ChildrenNameLowerPlurals = append(s.Model.ChildrenNameLowerPlurals, gocase.To(inflection.Plural(strcase.ToLowerCamel(gocase.Revert(c)))))
 	}
 
-	// TODO: validation
-
-	g.output(*s.Model, option{
+	opt := option{
 		ClientName:   clientName,
 		ModelSetName: modelSetName,
 		Initial:      initialNum,
-	})
+	}
+
+	if err := g.validate(*s.Model, opt); err != nil {
+		log.Fatal(err)
+	}
+
+	g.output(*s.Model, opt)
 }
 
 type search struct {
@@ -204,10 +208,10 @@ func (s *search) buildModel(typ *ast.TypeSpec) *model {
 				f2.Package = x2.Name
 				f2.TypRaw = x.Sel.Name
 			default:
-				log.Fatalf("currently, this field type is unsupported. (type=%s, field=%s)", typ.Name.Name, f.Names[0].Name)
+				log.Fatalf("This type is unsupported (model=%s, field=%s)", typ.Name.Name, f.Names[0].Name)
 			}
 		default:
-			log.Fatalf("currently, this field type is unsupported. (type=%s, field=%s)", typ.Name.Name, f.Names[0].Name)
+			log.Fatalf("This type is unsupported (model=%s, field=%s)", typ.Name.Name, f.Names[0].Name)
 		}
 		m.FieldTypes = append(m.FieldTypes, f2.Typ)
 
