@@ -191,9 +191,15 @@ func (m *User) AddFoo(value float32, note string) (*Foo, error) {
 	if err := _Foo_validateNote(note); err != nil {
 		return nil, err
 	}
+	maxID := 0
+	for _, v := range _Foo_cache[m.UserID] {
+		if maxID < v.FooID {
+			maxID = v.FooID
+		}
+	}
 	foo := &Foo{
 		UserID: m.UserID,
-		FooID:  _Foo_maxRowNo + 1,
+		FooID:  maxID + 1,
 		Value:  value,
 		Note:   note,
 	}

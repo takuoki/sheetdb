@@ -398,6 +398,15 @@ func (g *Generator) outputAdd(m model, o option) {
 		}
 	}
 
+	if m.Parent != nil && autoNumbering(m.ThisKeyName, m.ThisKeyType) {
+		g.Printf("\tmaxID := 0\n")
+		g.Printf("\tfor _, v := range _%[1]s_cache[%[2]s] {\n", m.Name, strings.Join(prefixes(m.Parent.PkNames, "m."), "]["))
+		g.Printf("\t\tif maxID < v.%s {\n", m.ThisKeyName)
+		g.Printf("\t\t\tmaxID = v.%s\n", m.ThisKeyName)
+		g.Printf("\t\t}\n")
+		g.Printf("\t}\n")
+	}
+
 	g.Printf("\t%[2]s := &%[1]s{\n", m.Name, m.NameLower)
 
 	for _, f := range m.Fields {
@@ -405,7 +414,11 @@ func (g *Generator) outputAdd(m model, o option) {
 			if f.IsParentKey {
 				g.Printf("\t\t%[1]s: m.%[1]s,\n", f.Name)
 			} else if autoNumbering(f.Name, f.Typ) {
-				g.Printf("\t\t%[2]s: _%[1]s_maxRowNo + %[3]d,\n", m.Name, f.Name, o.Initial)
+				if m.Parent == nil {
+					g.Printf("\t\t%[2]s: _%[1]s_maxRowNo + %[3]d,\n", m.Name, f.Name, o.Initial)
+				} else {
+					g.Printf("\t\t%[1]s: maxID + %[2]d,\n", f.Name, o.Initial)
+				}
 			} else {
 				g.Printf("\t\t%s: %s,\n", f.Name, f.NameLower)
 			}

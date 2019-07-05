@@ -192,10 +192,16 @@ func GetFooChildren(userID int, fooID int, opts ...FooChildQueryOption) ([]*FooC
 func (m *Foo) AddFooChild(value float32) (*FooChild, error) {
 	_FooChild_mutex.Lock()
 	defer _FooChild_mutex.Unlock()
+	maxID := 0
+	for _, v := range _FooChild_cache[m.UserID][m.FooID] {
+		if maxID < v.ChildID {
+			maxID = v.ChildID
+		}
+	}
 	fooChild := &FooChild{
 		UserID:  m.UserID,
 		FooID:   m.FooID,
-		ChildID: _FooChild_maxRowNo + 1,
+		ChildID: maxID + 1,
 		Value:   value,
 	}
 	if err := fooChild._asyncAdd(_FooChild_maxRowNo + 1); err != nil {
