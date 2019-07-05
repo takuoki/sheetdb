@@ -23,6 +23,8 @@ const (
 	_FooChild_column_Value     = 3 // D
 	_FooChild_column_UpdatedAt = 4 // E
 	_FooChild_column_DeletedAt = 5 // F
+
+	_FooChild_numOfChildren = 0
 )
 
 var (

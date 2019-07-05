@@ -24,6 +24,11 @@ const (
 	_User_column_Birthday  = 4 // E
 	_User_column_UpdatedAt = 5 // F
 	_User_column_DeletedAt = 6 // G
+
+	_User_Child_Foo           = 0
+	_User_Child_Bar           = 0
+	_User_numOfChildren       = 3
+	_User_numOfDirectChildren = 2
 )
 
 var (
@@ -33,6 +38,15 @@ var (
 	_User_maxRowNo        = 0
 	_User_Email_uniqueSet = map[string]struct{}{}
 )
+
+func _() {
+	_ = _Foo_Parent_User
+	_ = _Bar_Parent_User
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[_User_numOfChildren-_User_numOfDirectChildren-_Foo_numOfChildren-_Bar_numOfChildren]
+}
 
 func init() {
 	sheetdb.SetModel("default", "User", _User_sheetName, _User_load)

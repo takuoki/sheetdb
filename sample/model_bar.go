@@ -23,6 +23,10 @@ const (
 	_Bar_column_Note      = 3 // D
 	_Bar_column_UpdatedAt = 4 // E
 	_Bar_column_DeletedAt = 5 // F
+
+	_Bar_Parent_User         = 0
+	_Bar_numOfChildren       = 0
+	_Bar_numOfDirectChildren = 0
 )
 
 var (

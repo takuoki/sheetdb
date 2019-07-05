@@ -33,6 +33,7 @@ type model struct {
 	ChildrenNamePlurals      []string
 	ChildrenNameLowers       []string
 	ChildrenNameLowerPlurals []string
+	DirectChildrenNames      []string
 }
 
 type option struct {
