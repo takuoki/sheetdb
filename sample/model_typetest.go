@@ -16,6 +16,7 @@ import (
 )
 
 const (
+	// Sheet definition
 	_TypeTest_sheetName             = "typeTests"
 	_TypeTest_column_ID             = 0  // A
 	_TypeTest_column_StringValue    = 1  // B

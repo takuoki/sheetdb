@@ -16,6 +16,7 @@ import (
 )
 
 const (
+	// Sheet definition
 	_Foo_sheetName        = "foos"
 	_Foo_column_UserID    = 0 // A
 	_Foo_column_FooID     = 1 // B
@@ -24,10 +25,11 @@ const (
 	_Foo_column_UpdatedAt = 4 // E
 	_Foo_column_DeletedAt = 5 // F
 
-	_Foo_Parent_User          = 0
-	_Foo_DirectChild_FooChild = 0
-	_Foo_numOfChildren        = 1
-	_Foo_numOfDirectChildren  = 1
+	// Parent children relation for compile check
+	_Foo_parent_User         = 0
+	_Foo_child_FooChild      = 0
+	_Foo_numOfChildren       = 1
+	_Foo_numOfDirectChildren = 1
 )
 
 var (
@@ -36,6 +38,18 @@ var (
 	_Foo_rowNoMap = map[int]map[int]int{}  // map[userID][fooID]rowNo
 	_Foo_maxRowNo = 0
 )
+
+func _() {
+	// An "undeclared name" compiler error signifies that parent-children option conflicts between models.
+	// Make sure that the parent-children options are correct for all relevant models and try again.
+	_ = _User_child_Foo
+	_ = _FooChild_parent_Foo
+	// An "invalid array index" compiler error signifies that the children option is incorrect.
+	// Make sure that all child models are specified, including not only the direct child model
+	// but also the grandchild model, and try again.
+	var x [1]struct{}
+	_ = x[_Foo_numOfChildren-_Foo_numOfDirectChildren-_FooChild_numOfChildren]
+}
 
 func init() {
 	sheetdb.SetModel("default", "Foo", _Foo_sheetName, _Foo_load)

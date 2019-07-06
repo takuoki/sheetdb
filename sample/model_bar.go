@@ -16,6 +16,7 @@ import (
 )
 
 const (
+	// Sheet definition
 	_Bar_sheetName        = "bars"
 	_Bar_column_UserID    = 0 // A
 	_Bar_column_Datetime  = 1 // B
@@ -24,7 +25,8 @@ const (
 	_Bar_column_UpdatedAt = 4 // E
 	_Bar_column_DeletedAt = 5 // F
 
-	_Bar_Parent_User         = 0
+	// Parent children relation for compile check
+	_Bar_parent_User         = 0
 	_Bar_numOfChildren       = 0
 	_Bar_numOfDirectChildren = 0
 )
@@ -35,6 +37,12 @@ var (
 	_Bar_rowNoMap = map[int]map[sheetdb.Datetime]int{}  // map[userID][datetime]rowNo
 	_Bar_maxRowNo = 0
 )
+
+func _() {
+	// An "undeclared name" compiler error signifies that parent-children option conflicts between models.
+	// Make sure that the parent-children options are correct for all relevant models and try again.
+	_ = _User_child_Bar
+}
 
 func init() {
 	sheetdb.SetModel("default", "Bar", _Bar_sheetName, _Bar_load)

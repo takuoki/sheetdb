@@ -16,6 +16,7 @@ import (
 )
 
 const (
+	// Sheet definition
 	_FooChild_sheetName        = "fooChildren"
 	_FooChild_column_UserID    = 0 // A
 	_FooChild_column_FooID     = 1 // B
@@ -24,7 +25,10 @@ const (
 	_FooChild_column_UpdatedAt = 4 // E
 	_FooChild_column_DeletedAt = 5 // F
 
-	_FooChild_numOfChildren = 0
+	// Parent children relation for compile check
+	_FooChild_parent_Foo          = 0
+	_FooChild_numOfChildren       = 0
+	_FooChild_numOfDirectChildren = 0
 )
 
 var (
@@ -33,6 +37,12 @@ var (
 	_FooChild_rowNoMap = map[int]map[int]map[int]int{}       // map[userID][fooID][childID]rowNo
 	_FooChild_maxRowNo = 0
 )
+
+func _() {
+	// An "undeclared name" compiler error signifies that parent-children option conflicts between models.
+	// Make sure that the parent-children options are correct for all relevant models and try again.
+	_ = _Foo_child_FooChild
+}
 
 func init() {
 	sheetdb.SetModel("default", "FooChild", _FooChild_sheetName, _FooChild_load)

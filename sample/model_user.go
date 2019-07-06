@@ -16,6 +16,7 @@ import (
 )
 
 const (
+	// Sheet definition
 	_User_sheetName        = "users"
 	_User_column_UserID    = 0 // A
 	_User_column_Name      = 1 // B
@@ -25,8 +26,9 @@ const (
 	_User_column_UpdatedAt = 5 // F
 	_User_column_DeletedAt = 6 // G
 
-	_User_Child_Foo           = 0
-	_User_Child_Bar           = 0
+	// Parent children relation for compile check
+	_User_child_Foo           = 0
+	_User_child_Bar           = 0
 	_User_numOfChildren       = 3
 	_User_numOfDirectChildren = 2
 )
@@ -40,10 +42,13 @@ var (
 )
 
 func _() {
-	_ = _Foo_Parent_User
-	_ = _Bar_Parent_User
-	// An "invalid array index" compiler error signifies that the constant values have changed.
-	// Re-run the stringer command to generate them again.
+	// An "undeclared name" compiler error signifies that parent-children option conflicts between models.
+	// Make sure that the parent-children options are correct for all relevant models and try again.
+	_ = _Foo_parent_User
+	_ = _Bar_parent_User
+	// An "invalid array index" compiler error signifies that the children option is incorrect.
+	// Make sure that all child models are specified, including not only the direct child model
+	// but also the grandchild model, and try again.
 	var x [1]struct{}
 	_ = x[_User_numOfChildren-_User_numOfDirectChildren-_Foo_numOfChildren-_Bar_numOfChildren]
 }

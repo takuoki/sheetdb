@@ -12,6 +12,7 @@ func (g *Generator) output(m model, o option) {
 	g.outputImport(m)
 	g.outputConst(m)
 	g.outputVar(m)
+	g.outputCompileCheck(m)
 	g.outputInit(m, o)
 	g.outputLoad(m)
 	g.outputGet(m)
@@ -64,12 +65,26 @@ func (g *Generator) outputImport(m model) {
 
 func (g *Generator) outputConst(m model) {
 	g.Printf("const (\n")
+	g.Printf("\t// Sheet definition\n")
 	g.Printf("\t_%s_sheetName = \"%s\"\n", m.Name, m.NameLowerPlural)
 	for i, f := range m.Fields {
 		g.Printf("\t_%s_column_%s = %d // %s\n", m.Name, f.Name, i, clmconv.Itoa(i))
 	}
 	g.Printf("\t_%s_column_UpdatedAt = %d // %s\n", m.Name, len(m.Fields), clmconv.Itoa(len(m.Fields)))
 	g.Printf("\t_%s_column_DeletedAt = %d // %s\n", m.Name, len(m.Fields)+1, clmconv.Itoa(len(m.Fields)+1))
+
+	if m.Parent != nil || len(m.Children) > 0 {
+		g.Printf("\t\n// Parent children relation for compile check\n")
+		if m.Parent != nil {
+			g.Printf("\t_%s_parent_%s = 0\n", m.Name, m.Parent.Name)
+		}
+		for _, child := range m.DirectChildrenNames {
+			g.Printf("\t_%s_child_%s = 0\n", m.Name, child)
+		}
+		g.Printf("\t_%s_numOfChildren = %d\n", m.Name, len(m.Children))
+		g.Printf("\t_%s_numOfDirectChildren = %d\n", m.Name, len(m.DirectChildrenNames))
+	}
+
 	g.Printf(")\n\n")
 }
 
@@ -85,6 +100,33 @@ func (g *Generator) outputVar(m model) {
 		}
 	}
 	g.Printf(")\n\n")
+}
+
+func (g *Generator) outputCompileCheck(m model) {
+	if m.Parent == nil && len(m.Children) == 0 {
+		return
+	}
+	g.Printf("func _() {\n")
+	g.Printf("\t// An \"undeclared name\" compiler error signifies that parent-children option conflicts between models.\n")
+	g.Printf("\t// Make sure that the parent-children options are correct for all relevant models and try again.\n")
+	if m.Parent != nil {
+		g.Printf("\t_ = _%[2]s_child_%[1]s\n", m.Name, m.Parent.Name)
+	}
+	for _, child := range m.DirectChildrenNames {
+		g.Printf("\t_ = _%[2]s_parent_%[1]s\n", m.Name, child)
+	}
+	if len(m.Children) > 0 {
+		g.Printf("\t// An \"invalid array index\" compiler error signifies that the children option is incorrect.\n")
+		g.Printf("\t// Make sure that all child models are specified, including not only the direct child model\n")
+		g.Printf("\t// but also the grandchild model, and try again.\n")
+		g.Printf("\tvar x [1]struct{}\n")
+		g.Printf("\t_ = x[_%[1]s_numOfChildren - _%[1]s_numOfDirectChildren", m.Name)
+		for _, child := range m.DirectChildrenNames {
+			g.Printf(" - _%s_numOfChildren", child)
+		}
+		g.Printf("\t]\n")
+	}
+	g.Printf("}\n\n")
 }
 
 func (g *Generator) outputInit(m model, o option) {

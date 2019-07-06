@@ -91,6 +91,11 @@ func (g *Generator) generate(typeName, parentName, childrenNames, clientName, mo
 		s.Model.ChildrenNameLowers = append(s.Model.ChildrenNameLowers, gocase.To(strcase.ToLowerCamel(gocase.Revert(c))))
 		s.Model.ChildrenNameLowerPlurals = append(s.Model.ChildrenNameLowerPlurals, gocase.To(inflection.Plural(strcase.ToLowerCamel(gocase.Revert(c)))))
 	}
+	for _, c := range s.ChildrenModels {
+		if len(c.PkNames) == len(s.Model.PkNames)+1 {
+			s.Model.DirectChildrenNames = append(s.Model.DirectChildrenNames, c.Name)
+		}
+	}
 
 	opt := option{
 		ClientName:   clientName,
