@@ -15,8 +15,8 @@ Currently we are not measuring performance. It is intended for use in small appl
 	* [2. Generate codes from models](#Generatecodesfrommodels)
 	* [3. Set up Google spreadsheet](#SetupGooglespreadsheet)
 	* [4. Initialize models](#Initializemodels)
-		* [Create new client](#Createnewclient)
 		* [Set up nortificaltion](#Setupnortificaltion)
+		* [Create new client](#Createnewclient)
 		* [Load sheet data](#Loadsheetdata)
 	* [5. Use CRUD functions](#UseCRUDfunctions)
 		* [Read (Get/Select)](#ReadGetSelect)
@@ -130,6 +130,21 @@ Prepare a spreadsheet according to the header comments of each generated file.
 
 ### <a name='Initializemodels'></a>4. Initialize models
 
+#### <a name='Setupnortificaltion'></a>Set up nortificaltion
+
+By setting Logger, you can customize log output freely.
+If you want to send an alert to Slack, you can use `SlackLogger` in this package.
+
+```go
+sheetdb.SetLogger(sheetdb.NewSlackLogger(
+  "project name",
+  "service name",
+  "icon_emoji",
+  "https://hooks.slack.com/services/zzz/zzz/zzzzz",
+  sheetdb.LevelError,
+))
+```
+
 #### <a name='Createnewclient'></a>Create new client
 
 ```go
@@ -140,10 +155,6 @@ client, err := sheetdb.New(
   "xxxxx",                            // Google spreadsheet ID
 )
 ```
-
-#### <a name='Setupnortificaltion'></a>Set up nortificaltion
-
-TBD
 
 #### <a name='Loadsheetdata'></a>Load sheet data
 

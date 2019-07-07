@@ -54,7 +54,7 @@ func _() {
 }
 
 func init() {
-	sheetdb.SetModel("default", "User", _User_sheetName, _User_load)
+	sheetdb.RegisterModel("default", "User", _User_sheetName, _User_load)
 }
 
 func _User_load(data *gsheets.Sheet) error {
