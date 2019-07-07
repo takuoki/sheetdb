@@ -14,12 +14,16 @@ var dbClient *sheetdb.Client
 // Initialize initializes this package.
 func Initialize() error {
 	ctx := context.Background()
-	client, err := sheetdb.New(ctx, os.Getenv("GOOGLE_API_CREDENTIALS"), os.Getenv("GOOGLE_API_TOKEN"), sheetID)
+	client, err := sheetdb.New(
+		ctx,
+		os.Getenv("GOOGLE_API_CREDENTIALS"),
+		os.Getenv("GOOGLE_API_TOKEN"),
+		sheetID,
+	)
 	if err != nil {
 		return err
 	}
-	err = client.LoadData(ctx)
-	if err != nil {
+	if err := client.LoadData(ctx); err != nil {
 		return err
 	}
 	dbClient = client

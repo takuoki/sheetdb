@@ -1,5 +1,8 @@
 # sheetdb
 
+[![GoDoc](https://godoc.org/github.com/takuoki/sheetdb?status.svg)](https://godoc.org/github.com/takuoki/sheetdb)
+[![MIT License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)
+
 A golang package for using Google spreadsheets as a database instead of the actual database management system.
 
 **!!! Caution !!!**
