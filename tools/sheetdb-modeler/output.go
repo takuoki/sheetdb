@@ -131,7 +131,7 @@ func (g *Generator) outputCompileCheck(m model) {
 
 func (g *Generator) outputInit(m model, o option) {
 	g.Printf("func init() {\n")
-	g.Printf("\tsheetdb.SetModel(\"%[2]s\", \"%[1]s\", _%[1]s_sheetName, _%[1]s_load)\n", m.Name, o.ModelSetName)
+	g.Printf("\tsheetdb.RegisterModel(\"%[2]s\", \"%[1]s\", _%[1]s_sheetName, _%[1]s_load)\n", m.Name, o.ModelSetName)
 	g.Printf("}\n\n")
 }
 

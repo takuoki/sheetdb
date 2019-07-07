@@ -45,7 +45,7 @@ func _() {
 }
 
 func init() {
-	sheetdb.SetModel("default", "FooChild", _FooChild_sheetName, _FooChild_load)
+	sheetdb.RegisterModel("default", "FooChild", _FooChild_sheetName, _FooChild_load)
 }
 
 func _FooChild_load(data *gsheets.Sheet) error {

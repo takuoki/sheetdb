@@ -6,5 +6,6 @@ require (
 	github.com/takuoki/clmconv v1.0.0
 	github.com/takuoki/gocase v1.0.0
 	github.com/takuoki/gsheets v0.2.0
+	github.com/takuoki/slack-alert v0.0.3
 	golang.org/x/tools v0.0.0-20190627220010-94c5763a7c84
 )
