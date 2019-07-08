@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/takuoki/gsheets"
+	"golang.org/x/sync/errgroup"
 )
 
 var modelSets = map[string][]model{}
@@ -67,18 +68,29 @@ func (c *Client) LoadData(ctx context.Context) error {
 	if c.gsClient == nil {
 		return errors.New("The client has not been created correctly")
 	}
+
+	eg, ctx := errgroup.WithContext(ctx)
 	for _, m := range modelSets[c.modelSetName] {
-		data, err := c.gsClient.GetSheet(ctx, c.spreadsheetID, m.sheetName)
-		if err != nil {
-			return err
-		}
-		logger.Infof("Loading from '%s' model", m.name)
-		err = m.loadFunc(data)
-		if err != nil {
-			return fmt.Errorf("Unable to load '%s' data: %v", m.name, err)
-		}
+		m := m
+		eg.Go(func() (er error) {
+			defer func() {
+				if e := recover(); e != nil {
+					er = fmt.Errorf("Panic recovered in goroutine: %v", e)
+				}
+			}()
+
+			data, err := c.gsClient.GetSheet(ctx, c.spreadsheetID, m.sheetName)
+			if err != nil {
+				return err
+			}
+			logger.Infof("Loading from '%s' model", m.name)
+			if err := m.loadFunc(data); err != nil {
+				return fmt.Errorf("Unable to load '%s' data: %v", m.name, err)
+			}
+			return nil
+		})
 	}
-	return nil
+	return eg.Wait()
 }
 
 // AsyncUpdate applies updates to s spreadsheet asynchronously.
