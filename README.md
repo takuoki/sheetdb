@@ -1,5 +1,6 @@
 # sheetdb
 
+[![CircleCI](https://circleci.com/gh/takuoki/sheetdb/tree/master.svg?style=shield&circle-token=9bbc178fd927c6b27f6d726ffd66e3d5deb06fcc)](https://circleci.com/gh/takuoki/sheetdb/tree/master)
 [![GoDoc](https://godoc.org/github.com/takuoki/sheetdb?status.svg)](https://godoc.org/github.com/takuoki/sheetdb)
 [![MIT License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)
 
