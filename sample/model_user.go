@@ -42,6 +42,10 @@ var (
 )
 
 func _() {
+	// An "undeclared name" compiler error signifies that parent and child model set names are different.
+	// Make sure that all models in parent-child relationship exist in the same model set (spreadsheet) and try again.
+	_ = _Foo_modelSetName_default
+	_ = _Bar_modelSetName_default
 	// An "undeclared name" compiler error signifies that parent-children option conflicts between models.
 	// Make sure that the parent-children options are correct for all relevant models and try again.
 	_ = _Foo_parent_User

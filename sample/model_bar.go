@@ -26,9 +26,10 @@ const (
 	_Bar_column_DeletedAt = 5 // F
 
 	// Parent children relation for compile check
-	_Bar_parent_User         = 0
-	_Bar_numOfChildren       = 0
-	_Bar_numOfDirectChildren = 0
+	_Bar_modelSetName_default = 0
+	_Bar_parent_User          = 0
+	_Bar_numOfChildren        = 0
+	_Bar_numOfDirectChildren  = 0
 )
 
 var (
