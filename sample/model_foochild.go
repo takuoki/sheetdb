@@ -163,6 +163,7 @@ func FooChildSort(sortFunc func(fooChildren []*FooChild)) func(query *FooChildQu
 // GetFooChildren returns all fooChildren that foo has.
 // If any options are specified, the result according to the specified option is returned.
 // If there are no fooChild to return, this method returns an nil array.
+// If the sort option is not specified, the order of fooChildren is random.
 func (m *Foo) GetFooChildren(opts ...FooChildQueryOption) ([]*FooChild, error) {
 	fooChildQuery := &FooChildQuery{}
 	for _, opt := range opts {
@@ -191,6 +192,7 @@ func (m *Foo) GetFooChildren(opts ...FooChildQueryOption) ([]*FooChild, error) {
 // GetFooChildren returns all fooChildren that foo has.
 // If any options are specified, the result according to the specified option is returned.
 // If there are no fooChild to return, this function returns an nil array.
+// If the sort option is not specified, the order of fooChildren is random.
 func GetFooChildren(userID int, fooID int, opts ...FooChildQueryOption) ([]*FooChild, error) {
 	m, err := GetFoo(userID, fooID)
 	if err != nil {
