@@ -26,9 +26,10 @@ const (
 	_FooChild_column_DeletedAt = 5 // F
 
 	// Parent children relation for compile check
-	_FooChild_parent_Foo          = 0
-	_FooChild_numOfChildren       = 0
-	_FooChild_numOfDirectChildren = 0
+	_FooChild_modelSetName_default = 0
+	_FooChild_parent_Foo           = 0
+	_FooChild_numOfChildren        = 0
+	_FooChild_numOfDirectChildren  = 0
 )
 
 var (

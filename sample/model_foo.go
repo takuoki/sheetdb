@@ -26,10 +26,11 @@ const (
 	_Foo_column_DeletedAt = 5 // F
 
 	// Parent children relation for compile check
-	_Foo_parent_User         = 0
-	_Foo_child_FooChild      = 0
-	_Foo_numOfChildren       = 1
-	_Foo_numOfDirectChildren = 1
+	_Foo_modelSetName_default = 0
+	_Foo_parent_User          = 0
+	_Foo_child_FooChild       = 0
+	_Foo_numOfChildren        = 1
+	_Foo_numOfDirectChildren  = 1
 )
 
 var (
@@ -40,6 +41,9 @@ var (
 )
 
 func _() {
+	// An "undeclared name" compiler error signifies that parent and child model set names are different.
+	// Make sure that all models in parent-child relationship exist in the same model set (spreadsheet) and try again.
+	_ = _FooChild_modelSetName_default
 	// An "undeclared name" compiler error signifies that parent-children option conflicts between models.
 	// Make sure that the parent-children options are correct for all relevant models and try again.
 	_ = _User_child_Foo
