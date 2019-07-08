@@ -10,6 +10,8 @@ A golang package for using Google spreadsheets as a database instead of the actu
 * Currently we are not measuring performance. It is intended for use in small applications where performance is not an issue.
 * The Google Sheets API has a [usage limit](https://developers.google.com/sheets/api/limits). Do not use this package for applications that require access beyond this usage limit.
 
+---
+
 <!-- vscode-markdown-toc -->
 * [Features](#Features)
 * [Installation](#Installation)
