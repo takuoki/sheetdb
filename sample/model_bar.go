@@ -159,6 +159,7 @@ func BarSort(sortFunc func(bars []*Bar)) func(query *BarQuery) *BarQuery {
 // GetBars returns all bars that user has.
 // If any options are specified, the result according to the specified option is returned.
 // If there are no bar to return, this method returns an nil array.
+// If the sort option is not specified, the order of bars is random.
 func (m *User) GetBars(opts ...BarQueryOption) ([]*Bar, error) {
 	barQuery := &BarQuery{}
 	for _, opt := range opts {
@@ -187,6 +188,7 @@ func (m *User) GetBars(opts ...BarQueryOption) ([]*Bar, error) {
 // GetBars returns all bars that user has.
 // If any options are specified, the result according to the specified option is returned.
 // If there are no bar to return, this function returns an nil array.
+// If the sort option is not specified, the order of bars is random.
 func GetBars(userID int, opts ...BarQueryOption) ([]*Bar, error) {
 	m, err := GetUser(userID)
 	if err != nil {

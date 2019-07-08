@@ -169,6 +169,7 @@ func FooSort(sortFunc func(foos []*Foo)) func(query *FooQuery) *FooQuery {
 // GetFoos returns all foos that user has.
 // If any options are specified, the result according to the specified option is returned.
 // If there are no foo to return, this method returns an nil array.
+// If the sort option is not specified, the order of foos is random.
 func (m *User) GetFoos(opts ...FooQueryOption) ([]*Foo, error) {
 	fooQuery := &FooQuery{}
 	for _, opt := range opts {
@@ -197,6 +198,7 @@ func (m *User) GetFoos(opts ...FooQueryOption) ([]*Foo, error) {
 // GetFoos returns all foos that user has.
 // If any options are specified, the result according to the specified option is returned.
 // If there are no foo to return, this function returns an nil array.
+// If the sort option is not specified, the order of foos is random.
 func GetFoos(userID int, opts ...FooQueryOption) ([]*Foo, error) {
 	m, err := GetUser(userID)
 	if err != nil {

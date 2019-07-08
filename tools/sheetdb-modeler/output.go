@@ -363,11 +363,13 @@ func (g *generator) outputGetList(m model) {
 		g.Printf("// Get%s returns all %s.\n", m.NamePlural, m.NameLowerPlural)
 		g.Printf("// If any options are specified, the result according to the specified option is returned.\n")
 		g.Printf("// If there are no %s to return, this function returns an nil array.\n", m.NameLower)
+		g.Printf("// If the sort option is not specified, the order of %s is random.\n", m.NameLowerPlural)
 		g.Printf("func Get%[2]s(opts ...%[1]sQueryOption) ([]*%[1]s, error) {\n", m.Name, m.NamePlural)
 	} else {
 		g.Printf("// Get%s returns all %s that %s has.\n", m.NamePlural, m.NameLowerPlural, m.Parent.NameLower)
 		g.Printf("// If any options are specified, the result according to the specified option is returned.\n")
 		g.Printf("// If there are no %s to return, this method returns an nil array.\n", m.NameLower)
+		g.Printf("// If the sort option is not specified, the order of %s is random.\n", m.NameLowerPlural)
 		g.Printf("func (m *%[3]s) Get%[2]s(opts ...%[1]sQueryOption) ([]*%[1]s, error) {\n", m.Name, m.NamePlural, m.Parent.Name)
 	}
 
@@ -411,6 +413,7 @@ func (g *generator) outputGetList(m model) {
 		g.Printf("// Get%s returns all %s that %s has.\n", m.NamePlural, m.NameLowerPlural, m.Parent.NameLower)
 		g.Printf("// If any options are specified, the result according to the specified option is returned.\n")
 		g.Printf("// If there are no %s to return, this function returns an nil array.\n", m.NameLower)
+		g.Printf("// If the sort option is not specified, the order of %s is random.\n", m.NameLowerPlural)
 		g.Printf("func Get%[2]s(%[3]s, opts ...%[1]sQueryOption) ([]*%[1]s, error) {\n", m.Name, m.NamePlural, join(m.Parent.PkNameLowers, m.Parent.PkTypes, " ", ", "))
 		g.outputGetParent(*m.Parent, true, 0)
 		g.Printf("\treturn m.Get%s(opts...)\n", m.NamePlural)

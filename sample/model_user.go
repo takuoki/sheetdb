@@ -175,6 +175,7 @@ func UserSort(sortFunc func(users []*User)) func(query *UserQuery) *UserQuery {
 // GetUsers returns all users.
 // If any options are specified, the result according to the specified option is returned.
 // If there are no user to return, this function returns an nil array.
+// If the sort option is not specified, the order of users is random.
 func GetUsers(opts ...UserQueryOption) ([]*User, error) {
 	userQuery := &UserQuery{}
 	for _, opt := range opts {
