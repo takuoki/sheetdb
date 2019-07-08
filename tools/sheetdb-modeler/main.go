@@ -23,6 +23,7 @@ var (
 	clientName    = flag.String("client", "dbClient", "variable name of sheetdb package client")
 	modelSetName  = flag.String("modelset", "default", "model set name")
 	initialNum    = flag.Int("initial", 1, "initial number of auto numbering")
+	test          = flag.String("test", "off", "test mode or not (set 'on' if you want to run in test mode)")
 	output        = flag.String("output", "", "output file name; default srcdir/<type>_model.go")
 )
 
@@ -63,7 +64,7 @@ func main() {
 	g.parsePackage(dir)
 
 	// Run generate.
-	g.generate(*typeName, *parentName, *childrenNames, *clientName, *modelSetName, *initialNum)
+	g.generate(*typeName, *parentName, *childrenNames, *clientName, *modelSetName, *initialNum, *test == "on")
 
 	// Format the output.
 	src := g.format()

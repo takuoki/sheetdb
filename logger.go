@@ -22,6 +22,7 @@ const (
 	LevelDebug LogLevel = iota + 1
 	LevelInfo
 	LevelError
+	LevelNoLogging
 )
 
 var (

@@ -99,7 +99,7 @@ func (g *generator) outputVar(m model) {
 	g.Printf("\t_%s_maxRowNo = 0\n", m.Name)
 	for _, f := range m.Fields {
 		if f.Unique {
-			g.Printf("\t_%[1]s_%[2]s_uniqueMap =map[string]*%[1]s{}\n", m.Name, f.Name)
+			g.Printf("\t_%[1]s_%[2]s_uniqueMap = map[string]*%[1]s{}\n", m.Name, f.Name)
 		}
 	}
 	g.Printf(")\n\n")
@@ -153,7 +153,13 @@ func (g *generator) outputLoad(m model) {
 
 	g.Printf("\t_%[1]s_cache = map[%[2]s]*%[1]s{}\n", m.Name, strings.Join(m.PkTypes, "]map["))
 	g.Printf("\t_%s_rowNoMap = map[%s]int{}\n", m.Name, strings.Join(m.PkTypes, "]map["))
-	g.Printf("\t_%s_maxRowNo = 0\n\n", m.Name)
+	g.Printf("\t_%s_maxRowNo = 0\n", m.Name)
+	for _, f := range m.Fields {
+		if f.Unique {
+			g.Printf("\t_%[1]s_%[2]s_uniqueMap = map[string]*%[1]s{}\n", m.Name, f.Name)
+		}
+	}
+	g.Printf("\n")
 
 	g.Printf("\tfor i, r := range data.Rows() {\n")
 	g.Printf("\t\tif i == 0 {\n")
@@ -832,8 +838,13 @@ func (g *generator) outputParse(m model) {
 
 func (g *generator) outputAsync(m model, o option) {
 
+	// Add
 	g.Printf("func (m *%s) _asyncAdd(rowNo int) error {\n", m.Name)
-	g.Printf("\tdata := []gsheets.UpdateValue{\n")
+	if !o.TestMode {
+		g.Printf("\tdata := []gsheets.UpdateValue{\n")
+	} else {
+		g.Printf("\t_ = []gsheets.UpdateValue{\n")
+	}
 	g.Printf("\t\t{\n")
 	g.Printf("\t\t\tSheetName: _%s_sheetName,\n", m.Name)
 	g.Printf("\t\t\tRowNo:     rowNo,\n")
@@ -856,11 +867,21 @@ func (g *generator) outputAsync(m model, o option) {
 	g.Printf("\t\t\t},\n")
 	g.Printf("\t\t},\n")
 	g.Printf("\t}\n")
-	g.Printf("\treturn %s.AsyncUpdate(data)\n", o.ClientName)
+
+	if !o.TestMode {
+		g.Printf("\treturn %s.AsyncUpdate(data)\n", o.ClientName)
+	} else {
+		g.Printf("\treturn nil\n")
+	}
 	g.Printf("}\n\n")
 
+	// Update
 	g.Printf("func (m *%s) _asyncUpdate() error {\n", m.Name)
-	g.Printf("\tdata := []gsheets.UpdateValue{\n")
+	if !o.TestMode {
+		g.Printf("\tdata := []gsheets.UpdateValue{\n")
+	} else {
+		g.Printf("\t_ = []gsheets.UpdateValue{\n")
+	}
 	g.Printf("\t\t{\n")
 	g.Printf("\t\t\tSheetName: _%s_sheetName,\n", m.Name)
 	g.Printf("\t\t\tRowNo:     _%[1]s_rowNoMap[%[2]s],\n", m.Name, strings.Join(prefixes(m.PkNames, "m."), "]["))
@@ -883,12 +904,21 @@ func (g *generator) outputAsync(m model, o option) {
 	g.Printf("\t\t\t},\n")
 	g.Printf("\t\t},\n")
 	g.Printf("\t}\n")
-	g.Printf("\treturn %s.AsyncUpdate(data)\n", o.ClientName)
+	if !o.TestMode {
+		g.Printf("\treturn %s.AsyncUpdate(data)\n", o.ClientName)
+	} else {
+		g.Printf("\treturn nil\n")
+	}
 	g.Printf("}\n\n")
 
+	// Delete
 	g.Printf("func (m *%[1]s) _asyncDelete(%[2]s) error {\n", m.Name, join(m.ChildrenNameLowerPlurals, m.ChildrenNames, " []*", ", "))
 	g.Printf("\tnow := time.Now()\n")
-	g.Printf("\tdata := []gsheets.UpdateValue{\n")
+	if !o.TestMode || len(m.Children) > 0 {
+		g.Printf("\tdata := []gsheets.UpdateValue{\n")
+	} else {
+		g.Printf("\t_ = []gsheets.UpdateValue{\n")
+	}
 	g.Printf("\t\t{\n")
 	g.Printf("\t\t\tSheetName: _%s_sheetName,\n", m.Name)
 	g.Printf("\t\t\tRowNo:     _%[1]s_rowNoMap[%[2]s],\n", m.Name, strings.Join(prefixes(m.PkNames, "m."), "]["))
@@ -938,7 +968,11 @@ func (g *generator) outputAsync(m model, o option) {
 		g.Printf("\t}\n")
 	}
 
-	g.Printf("\treturn %s.AsyncUpdate(data)\n", o.ClientName)
+	if !o.TestMode {
+		g.Printf("\treturn %s.AsyncUpdate(data)\n", o.ClientName)
+	} else {
+		g.Printf("\treturn nil\n")
+	}
 	g.Printf("}\n")
 }
 

@@ -2,35 +2,28 @@ package sample
 
 import (
 	"context"
-	"os"
 
 	"github.com/takuoki/sheetdb"
 )
 
-const sheetID string = "1dIxSIUM1vqehzt7gRz6Qi-UUlxeyl657ma88bfySs3E"
-
 var dbClient *sheetdb.Client
 
 // Initialize initializes this package.
-func Initialize() error {
-	ctx := context.Background()
-	client, err := sheetdb.New(
-		ctx,
-		os.Getenv("GOOGLE_API_CREDENTIALS"),
-		os.Getenv("GOOGLE_API_TOKEN"),
-		sheetID,
-	)
+func Initialize(ctx context.Context, credentials, token, spreadsheetID string) error {
+	client, err := sheetdb.New(ctx, credentials, token, spreadsheetID)
 	if err != nil {
-		return err
-	}
-	if err := client.LoadData(ctx); err != nil {
 		return err
 	}
 	dbClient = client
 	return nil
 }
 
-//go:generate sheetdb-modeler -type=User -children=Foo,FooChild,Bar -initial=10001
+// LoadData loads data from the spreadsheet.
+func LoadData(ctx context.Context) error {
+	return dbClient.LoadData(ctx)
+}
+
+//go:generate sheetdb-modeler -type=User -children=Foo,FooChild,Bar -initial=10001 -test=$TESTMODE
 
 // User is a struct of user.
 type User struct {
@@ -41,7 +34,7 @@ type User struct {
 	Birthday *sheetdb.Date `json:"birthday"`
 }
 
-//go:generate sheetdb-modeler -type=Foo -parent=User -children=FooChild
+//go:generate sheetdb-modeler -type=Foo -parent=User -children=FooChild -test=$TESTMODE
 
 // Foo is a struct of foo which is a child of user.
 type Foo struct {
@@ -51,7 +44,7 @@ type Foo struct {
 	Note   string  `json:"note" db:"allowempty"`
 }
 
-//go:generate sheetdb-modeler -type=FooChild -parent=Foo
+//go:generate sheetdb-modeler -type=FooChild -parent=Foo -test=$TESTMODE
 
 // FooChild is a struct of foo child.
 type FooChild struct {
@@ -61,7 +54,7 @@ type FooChild struct {
 	Value   float32 `json:"value"`
 }
 
-//go:generate sheetdb-modeler -type=Bar -parent=User
+//go:generate sheetdb-modeler -type=Bar -parent=User -test=$TESTMODE
 
 // Bar is a struct of bar which is a child of user.
 type Bar struct {
@@ -71,7 +64,7 @@ type Bar struct {
 	Note     string           `json:"note" db:"allowempty"`
 }
 
-//go:generate sheetdb-modeler -type=TypeTest
+//go:generate sheetdb-modeler -type=TypeTest -test=$TESTMODE
 
 // TypeTest is a struct for type test.
 type TypeTest struct {
