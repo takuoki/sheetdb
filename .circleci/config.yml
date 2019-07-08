@@ -1,0 +1,47 @@
+version: 2.1
+
+executors:
+  go-112:
+    docker:
+      - image: circleci/golang:1.12
+    working_directory: /go/src/github.com/takuoki/sheetdb
+
+jobs:
+  build:
+    executor: go-112
+    steps:
+      - checkout
+      - run:
+          name: Set env
+          command: |
+            echo 'export GO111MODULE=on' >> $BASH_ENV
+      # golint
+      - restore_cache:
+          keys:
+            - golint
+      - run:
+          name: Checking golint
+          command: |
+            if ! type golint >/dev/null 2>&1; then
+              go get -u golang.org/x/lint/golint
+            fi
+            golint -set_exit_status ./...
+      - save_cache:
+          key: golint
+          paths:
+            - /go/bin/golint
+      # go vet
+      - run:
+          name: Checking go vet
+          command: |
+            go vet ./...
+      # go test
+      - run:
+          name: Testing
+          command: |
+            go install ./tools/sheetdb-modeler/
+            export TESTMODE=on
+            go generate ./sample/
+            go test -v -race -cover -coverprofile=coverage.out ./sample/
+      - codecov/upload:
+          file: ./coverage.out
