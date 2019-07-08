@@ -292,8 +292,8 @@ func DeleteUser(userID int) error {
 	if err := user._asyncDelete(foos, fooChildren, bars); err != nil {
 		return err
 	}
-	delete(_User_Email_uniqueMap, user.Email)
 	delete(_User_cache, userID)
+	delete(_User_Email_uniqueMap, user.Email)
 	delete(_Foo_cache, userID)
 	delete(_FooChild_cache, userID)
 	delete(_Bar_cache, userID)
