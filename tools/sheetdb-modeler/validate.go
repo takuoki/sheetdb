@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-func (g *Generator) validate(m model, o option) error {
+func (g *generator) validate(m model, o option) error {
 	if err := g.validatePrimaryKey(m); err != nil {
 		return err
 	}
@@ -22,7 +22,7 @@ func (g *Generator) validate(m model, o option) error {
 	return nil
 }
 
-func (g *Generator) validatePrimaryKey(m model) error {
+func (g *generator) validatePrimaryKey(m model) error {
 	if m.ThisKeyName == "" || m.ThisKeyType == "" {
 		return fmt.Errorf("There are no primary key (model=%s)", m.Name)
 	}
@@ -60,7 +60,7 @@ func (g *Generator) validatePrimaryKey(m model) error {
 	return nil
 }
 
-func (g *Generator) validateChildren(m model) error {
+func (g *generator) validateChildren(m model) error {
 	for _, child := range m.Children {
 		if len(child.PkNames) <= len(m.PkNames) {
 			return fmt.Errorf("The number of primary key must be greater than the number of primary key of parent (model=%s)", child.Name)
@@ -77,7 +77,7 @@ func (g *Generator) validateChildren(m model) error {
 	return nil
 }
 
-func (g *Generator) validateField(f field, m model) error {
+func (g *generator) validateField(f field, m model) error {
 
 	if f.Package == "" {
 		if f.Typ == "*string" {
@@ -108,7 +108,7 @@ func (g *Generator) validateField(f field, m model) error {
 	return nil
 }
 
-func (g *Generator) validateOption(m model, o option) error {
+func (g *generator) validateOption(m model, o option) error {
 	if o.ClientName == "" {
 		return fmt.Errorf("Client name must not be empty string (model=%s)", m.Name)
 	}

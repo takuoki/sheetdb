@@ -7,7 +7,8 @@ A golang package for using Google spreadsheets as a database instead of the actu
 
 **!!! Caution !!!**
 
-Currently we are not measuring performance. It is intended for use in small applications where performance is not an issue.
+* Currently we are not measuring performance. It is intended for use in small applications where performance is not an issue.
+* The Google Sheets API has a [usage limit](https://developers.google.com/sheets/api/limits). Do not use this package for applications that require access beyond this usage limit.
 
 <!-- vscode-markdown-toc -->
 * [Features](#Features)
@@ -137,6 +138,7 @@ Prepare a spreadsheet according to the header comments of each generated file.
 
 By setting Logger, you can customize log output freely.
 If you want to send an alert to Slack, you can use `SlackLogger` in this package.
+Configuration of Logger is package scope. Please note that it is not client scope.
 
 ```go
 sheetdb.SetLogger(sheetdb.NewSlackLogger(
@@ -150,13 +152,24 @@ sheetdb.SetLogger(sheetdb.NewSlackLogger(
 
 #### <a name='Createnewclient'></a>Create new client
 
+Create a new client using the `New` function.
+Set the created client in the package global variable. The name of the variable is the name specified with the `-client` option (the default is `dbClient`).
+
 ```go
-client, err := sheetdb.New(
-  ctx,
-  `{"installed":{"client_id":"..."}`, // Google API credentials
-  `{"access_token":"..."`,            // Google API token
-  "xxxxx",                            // Google spreadsheet ID
-)
+var dbClient *sheetdb.Client
+
+// Initialize initializes this package.
+func Initialize() error {
+  client, err := sheetdb.New(
+    ctx,
+    `{"installed":{"client_id":"..."}`, // Google API credentials
+    `{"access_token":"..."`,            // Google API token
+    "xxxxx",                            // Google spreadsheet ID
+  )
+  // ...
+  dbClient = client
+  return nil
+}
 ```
 
 #### <a name='Loadsheetdata'></a>Load sheet data
