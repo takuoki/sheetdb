@@ -180,7 +180,7 @@ err := client.LoadData(ctx)
 
 ### <a name='UseCRUDfunctions'></a>5. Use CRUD functions
 
-The functions in this section are generated automatically.
+The functions in this section are generated automatically by [sheetdb-modeler](tools/sheetdb-modeler).
 
 #### <a name='ReadGetSelect'></a>Read (Get/Select)
 
@@ -193,6 +193,12 @@ bar, err := user.GetBar(datetime)
 ```go
 foo, err := GetFoo(userID, fooID)
 bar, err := GetBar(userID, datetime)
+```
+
+get by unique key
+
+```go
+user, err := GetUserByEmail(email)
 ```
 
 get list
