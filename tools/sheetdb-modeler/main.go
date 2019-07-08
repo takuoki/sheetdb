@@ -26,8 +26,7 @@ var (
 	output        = flag.String("output", "", "output file name; default srcdir/<type>_model.go")
 )
 
-// Usage is a replacement usage function for the flags package.
-func Usage() {
+func usage() {
 	fmt.Fprintf(os.Stderr, "Usage of sheetdb-modeler:\n")
 	fmt.Fprintf(os.Stderr, "\tsheetdb-modeler [flags] -type T [directory]\n")
 	fmt.Fprintf(os.Stderr, "\tsheetdb-modeler [flags] -type T files... # Must be a single package\n")
@@ -40,7 +39,7 @@ func Usage() {
 func main() {
 	log.SetFlags(0)
 	log.SetPrefix("sheetdb-modeler: ")
-	flag.Usage = Usage
+	flag.Usage = usage
 	flag.Parse()
 	if len(*typeName) == 0 {
 		flag.Usage()
@@ -60,7 +59,7 @@ func main() {
 	} else {
 		log.Fatal("argument must be one, and must be an existing directory name.")
 	}
-	g := Generator{}
+	g := generator{}
 	g.parsePackage(dir)
 
 	// Run generate.
@@ -89,27 +88,27 @@ func isDirectory(name string) bool {
 	return info.IsDir()
 }
 
-type Generator struct {
+type generator struct {
 	buf bytes.Buffer // Accumulated output.
-	pkg *Package     // Package we are scanning.
+	pkg *pkg         // Package we are scanning.
 }
 
-func (g *Generator) Printf(format string, args ...interface{}) {
+func (g *generator) Printf(format string, args ...interface{}) {
 	fmt.Fprintf(&g.buf, format, args...)
 }
 
-type File struct {
-	pkg  *Package  // Package to which this file belongs.
+type file struct {
+	pkg  *pkg      // Package to which this file belongs.
 	file *ast.File // Parsed AST.
 }
 
-type Package struct {
+type pkg struct {
 	name  string
 	defs  map[*ast.Ident]types.Object
-	files []*File
+	files []*file
 }
 
-func (g *Generator) parsePackage(dir string) {
+func (g *generator) parsePackage(dir string) {
 	cfg := &packages.Config{
 		Mode: packages.LoadSyntax,
 	}
@@ -123,23 +122,23 @@ func (g *Generator) parsePackage(dir string) {
 	g.addPackage(pkgs[0])
 }
 
-func (g *Generator) addPackage(pkg *packages.Package) {
-	g.pkg = &Package{
-		name:  pkg.Name,
-		defs:  pkg.TypesInfo.Defs,
-		files: make([]*File, len(pkg.Syntax)),
+func (g *generator) addPackage(p *packages.Package) {
+	g.pkg = &pkg{
+		name:  p.Name,
+		defs:  p.TypesInfo.Defs,
+		files: make([]*file, len(p.Syntax)),
 	}
 
-	for i, file := range pkg.Syntax {
-		g.pkg.files[i] = &File{
-			file: file,
+	for i, f := range p.Syntax {
+		g.pkg.files[i] = &file{
+			file: f,
 			pkg:  g.pkg,
 		}
 	}
 }
 
-// format returns the gofmt-ed contents of the Generator's buffer.
-func (g *Generator) format() []byte {
+// format returns the gofmt-ed contents of the generator's buffer.
+func (g *generator) format() []byte {
 	src, err := format.Source(g.buf.Bytes())
 	if err != nil {
 		// Should never happen, but can arise when developing this code.

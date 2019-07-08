@@ -56,7 +56,7 @@ type field struct {
 	Unique        bool
 }
 
-func (g *Generator) generate(typeName, parentName, childrenNames, clientName, modelSetName string, initialNum int) {
+func (g *generator) generate(typeName, parentName, childrenNames, clientName, modelSetName string, initialNum int) {
 	s := search{
 		Typ:    typeName,
 		Parent: parentName,
