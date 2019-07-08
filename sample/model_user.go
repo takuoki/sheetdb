@@ -69,6 +69,7 @@ func _User_load(data *gsheets.Sheet) error {
 	_User_cache = map[int]*User{}
 	_User_rowNoMap = map[int]int{}
 	_User_maxRowNo = 0
+	_User_Email_uniqueMap = map[string]*User{}
 
 	for i, r := range data.Rows() {
 		if i == 0 {
