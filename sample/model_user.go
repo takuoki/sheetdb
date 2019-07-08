@@ -38,7 +38,7 @@ var (
 	_User_cache           = map[int]*User{} // map[userID]*User
 	_User_rowNoMap        = map[int]int{}   // map[userID]rowNo
 	_User_maxRowNo        = 0
-	_User_Email_uniqueSet = map[string]struct{}{}
+	_User_Email_uniqueMap = map[string]*User{}
 )
 
 func _() {
@@ -111,10 +111,10 @@ func _User_load(data *gsheets.Sheet) error {
 			Birthday: birthday,
 		}
 
-		_User_Email_uniqueSet[user.Email] = struct{}{}
 		_User_maxRowNo++
 		_User_cache[user.UserID] = &user
 		_User_rowNoMap[user.UserID] = _User_maxRowNo
+		_User_Email_uniqueMap[user.Email] = &user
 	}
 
 	return nil
@@ -126,6 +126,17 @@ func GetUser(userID int) (*User, error) {
 	_User_mutex.RLock()
 	defer _User_mutex.RUnlock()
 	if v, ok := _User_cache[userID]; ok {
+		return v, nil
+	}
+	return nil, &sheetdb.NotFoundError{Model: "User"}
+}
+
+// GetUserByEmail returns a user by Email.
+// If it can not be found, this function returns sheetdb.NotFoundError.
+func GetUserByEmail(email string) (*User, error) {
+	_User_mutex.RLock()
+	defer _User_mutex.RUnlock()
+	if v, ok := _User_Email_uniqueMap[email]; ok {
 		return v, nil
 	}
 	return nil, &sheetdb.NotFoundError{Model: "User"}
@@ -210,10 +221,10 @@ func AddUser(name string, email string, sex Sex, birthday *sheetdb.Date) (*User,
 	if err := user._asyncAdd(_User_maxRowNo + 1); err != nil {
 		return nil, err
 	}
-	_User_Email_uniqueSet[user.Email] = struct{}{}
 	_User_maxRowNo++
 	_User_cache[user.UserID] = user
 	_User_rowNoMap[user.UserID] = _User_maxRowNo
+	_User_Email_uniqueMap[user.Email] = user
 	return user, nil
 }
 
@@ -242,10 +253,10 @@ func UpdateUser(userID int, name string, email string, sex Sex, birthday *sheetd
 		return nil, err
 	}
 	if userCopy.Email != user.Email {
-		_User_Email_uniqueSet[userCopy.Email] = struct{}{}
-		delete(_User_Email_uniqueSet, user.Email)
+		delete(_User_Email_uniqueMap, user.Email)
 	}
 	user = &userCopy
+	_User_Email_uniqueMap[userCopy.Email] = &userCopy
 	return user, nil
 }
 
@@ -281,8 +292,8 @@ func DeleteUser(userID int) error {
 	if err := user._asyncDelete(foos, fooChildren, bars); err != nil {
 		return err
 	}
-	delete(_User_Email_uniqueSet, user.Email)
 	delete(_User_cache, userID)
+	delete(_User_Email_uniqueMap, user.Email)
 	delete(_Foo_cache, userID)
 	delete(_FooChild_cache, userID)
 	delete(_Bar_cache, userID)
@@ -301,7 +312,7 @@ func _User_validateEmail(email string, oldEmail *string) error {
 		return &sheetdb.EmptyStringError{FieldName: "Email"}
 	}
 	if oldEmail == nil || *oldEmail != email {
-		if _, ok := _User_Email_uniqueSet[email]; ok {
+		if _, ok := _User_Email_uniqueMap[email]; ok {
 			return &sheetdb.DuplicationError{FieldName: "Email"}
 		}
 	}

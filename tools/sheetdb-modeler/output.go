@@ -99,7 +99,7 @@ func (g *generator) outputVar(m model) {
 	g.Printf("\t_%s_maxRowNo = 0\n", m.Name)
 	for _, f := range m.Fields {
 		if f.Unique {
-			g.Printf("\t_%[1]s_%[2]s_uniqueSet =map[string]struct{}{}\n", m.Name, f.Name)
+			g.Printf("\t_%[1]s_%[2]s_uniqueMap =map[string]*%[1]s{}\n", m.Name, f.Name)
 		}
 	}
 	g.Printf(")\n\n")
@@ -190,15 +190,15 @@ func (g *generator) outputLoad(m model) {
 	}
 	g.Printf("\t\t}\n\n")
 
-	for _, f := range m.Fields {
-		if f.Unique {
-			g.Printf("\t\t_%[1]s_%[2]s_uniqueSet[%[3]s.%[2]s] = struct{}{}\n", m.Name, f.Name, m.NameLower)
-		}
-	}
 	g.Printf("\t\t_%s_maxRowNo++\n", m.Name)
 	g.outputParentMap(m)
 	g.Printf("\t\t_%[1]s_cache[%[3]s] = &%[2]s\n", m.Name, m.NameLower, strings.Join(prefixes(m.PkNames, m.NameLower+"."), "]["))
 	g.Printf("\t\t_%[1]s_rowNoMap[%[2]s] = _%[1]s_maxRowNo\n", m.Name, strings.Join(prefixes(m.PkNames, m.NameLower+"."), "]["))
+	for _, f := range m.Fields {
+		if f.Unique {
+			g.Printf("\t\t_%[1]s_%[2]s_uniqueMap[%[3]s.%[2]s] = &%[3]s\n", m.Name, f.Name, m.NameLower)
+		}
+	}
 	g.Printf("\t}\n\n")
 
 	g.Printf("\treturn nil\n")
@@ -287,6 +287,21 @@ func (g *generator) outputGet(m model) {
 		g.outputGetParent(*m.Parent, true, 0)
 		g.Printf("\treturn m.Get%s(%s)\n", m.Name, m.ThisKeyNameLower)
 		g.Printf("}\n\n")
+	}
+
+	for _, f := range m.Fields {
+		if f.Unique {
+			g.Printf("// Get%[1]sBy%[3]s returns a %[2]s by %[3]s.\n", m.Name, m.NameLower, f.Name)
+			g.Printf("// If it can not be found, this function returns sheetdb.NotFoundError.\n")
+			g.Printf("func Get%[1]sBy%[2]s(%[3]s %[4]s) (*%[1]s, error) {\n", m.Name, f.Name, f.NameLower, f.Typ)
+			g.Printf("\t_%s_mutex.RLock()\n", m.Name)
+			g.Printf("\tdefer _%s_mutex.RUnlock()\n", m.Name)
+			g.Printf("\tif v, ok := _%s_%s_uniqueMap[%s]; ok {\n", m.Name, f.Name, f.NameLower)
+			g.Printf("\t\treturn v, nil\n")
+			g.Printf("\t}\n")
+			g.Printf("\treturn nil, &sheetdb.NotFoundError{Model: \"%s\"}\n", m.Name)
+			g.Printf("}\n\n")
+		}
 	}
 }
 
@@ -483,17 +498,17 @@ func (g *generator) outputAdd(m model, o option) {
 	g.Printf("\tif err := %[2]s._asyncAdd(_%[1]s_maxRowNo + 1); err != nil {\n", m.Name, m.NameLower)
 	g.Printf("\t\treturn nil, err\n")
 	g.Printf("\t}\n")
-	for _, f := range m.Fields {
-		if f.Unique {
-			g.Printf("\t_%[1]s_%[2]s_uniqueSet[%[3]s.%[2]s] = struct{}{}\n", m.Name, f.Name, m.NameLower)
-		}
-	}
 	g.Printf("\t_%s_maxRowNo++\n", m.Name)
 
 	g.outputParentMap(m)
 
 	g.Printf("\t_%[1]s_cache[%[3]s] = %[2]s\n", m.Name, m.NameLower, strings.Join(prefixes(m.PkNames, m.NameLower+"."), "]["))
 	g.Printf("\t_%[1]s_rowNoMap[%[2]s] = _%[1]s_maxRowNo\n", m.Name, strings.Join(prefixes(m.PkNames, m.NameLower+"."), "]["))
+	for _, f := range m.Fields {
+		if f.Unique {
+			g.Printf("\t_%[1]s_%[2]s_uniqueMap[%[3]s.%[2]s] = %[3]s\n", m.Name, f.Name, m.NameLower)
+		}
+	}
 	g.Printf("\treturn %s, nil\n", m.NameLower)
 	g.Printf("}\n\n")
 
@@ -572,13 +587,17 @@ func (g *generator) outputUpdate(m model) {
 	for _, f := range m.Fields {
 		if f.Unique {
 			g.Printf("\tif %[1]sCopy.%[2]s != %[1]s.%[2]s {\n", m.NameLower, f.Name)
-			g.Printf("\t\t_%[1]s_%[3]s_uniqueSet[%[2]sCopy.%[3]s] = struct{}{}\n", m.Name, m.NameLower, f.Name)
-			g.Printf("\t\tdelete(_%[1]s_%[3]s_uniqueSet, %[2]s.%[3]s)\n", m.Name, m.NameLower, f.Name)
+			g.Printf("\t\tdelete(_%[1]s_%[3]s_uniqueMap, %[2]s.%[3]s)\n", m.Name, m.NameLower, f.Name)
 			g.Printf("\t}\n")
 		}
 	}
 
 	g.Printf("\t%[1]s = &%[1]sCopy\n", m.NameLower)
+	for _, f := range m.Fields {
+		if f.Unique {
+			g.Printf("\t_%[1]s_%[3]s_uniqueMap[%[2]sCopy.%[3]s] = &%[2]sCopy\n", m.Name, m.NameLower, f.Name)
+		}
+	}
 	g.Printf("\treturn %s, nil\n", m.NameLower)
 	g.Printf("}\n\n")
 
@@ -656,18 +675,16 @@ func (g *generator) outputDelete(m model) {
 	g.Printf("\t\treturn err\n")
 	g.Printf("\t}\n")
 
-	for _, f := range m.Fields {
-		if f.Unique {
-			g.Printf("\tdelete(_%[1]s_%[3]s_uniqueSet, %[2]s.%[3]s)\n", m.Name, m.NameLower, f.Name)
-		}
-	}
-
 	if m.Parent == nil {
 		g.Printf("\tdelete(_%[1]s_cache, %[2]s)\n", m.Name, m.ThisKeyNameLower)
 	} else {
 		g.Printf("\tdelete(_%[1]s_cache[%[3]s], %[2]s)\n", m.Name, m.ThisKeyNameLower, strings.Join(prefixes(m.Parent.PkNames, "m."), "]["))
 	}
-
+	for _, f := range m.Fields {
+		if f.Unique {
+			g.Printf("\tdelete(_%[1]s_%[3]s_uniqueMap, %[2]s.%[3]s)\n", m.Name, m.NameLower, f.Name)
+		}
+	}
 	for _, child := range m.Children {
 		if m.Parent == nil {
 			g.Printf("\tdelete(_%[1]s_cache, %[2]s)\n", child.Name, m.ThisKeyNameLower)
@@ -723,7 +740,7 @@ func (g *generator) outputValidate(m model) {
 
 		if f.Unique {
 			g.Printf("\tif old%[1]s == nil || *old%[1]s != %[2]s {\n", f.Name, f.NameLower)
-			g.Printf("\t\tif _, ok := _%[1]s_%[2]s_uniqueSet[%[3]s]; ok {\n", m.Name, f.Name, f.NameLower)
+			g.Printf("\t\tif _, ok := _%[1]s_%[2]s_uniqueMap[%[3]s]; ok {\n", m.Name, f.Name, f.NameLower)
 			g.Printf("\t\t\treturn &sheetdb.DuplicationError{FieldName: \"%s\"}\n", f.Name)
 			g.Printf("\t\t}\n")
 			g.Printf("\t}\n")

@@ -10,6 +10,8 @@ A golang package for using Google spreadsheets as a database instead of the actu
 * Currently we are not measuring performance. It is intended for use in small applications where performance is not an issue.
 * The Google Sheets API has a [usage limit](https://developers.google.com/sheets/api/limits). Do not use this package for applications that require access beyond this usage limit.
 
+---
+
 <!-- vscode-markdown-toc -->
 * [Features](#Features)
 * [Installation](#Installation)
@@ -180,7 +182,7 @@ err := client.LoadData(ctx)
 
 ### <a name='UseCRUDfunctions'></a>5. Use CRUD functions
 
-The functions in this section are generated automatically.
+The functions in this section are generated automatically by [sheetdb-modeler](tools/sheetdb-modeler).
 
 #### <a name='ReadGetSelect'></a>Read (Get/Select)
 
@@ -193,6 +195,12 @@ bar, err := user.GetBar(datetime)
 ```go
 foo, err := GetFoo(userID, fooID)
 bar, err := GetBar(userID, datetime)
+```
+
+get by unique key
+
+```go
+user, err := GetUserByEmail(email)
 ```
 
 get list
