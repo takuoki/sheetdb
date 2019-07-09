@@ -306,6 +306,9 @@ func (m *User) DeleteFoo(fooID int) error {
 	}
 	delete(_Foo_cache[m.UserID], fooID)
 	delete(_FooChild_cache[m.UserID], fooID)
+	for _, v := range fooChildren {
+		delete(_FooChild_Value_uniqueMap, v.Value)
+	}
 	return nil
 }
 
