@@ -12,7 +12,17 @@ import (
 
 var (
 	datetime19590525, _ = sheetdb.NewDate("1959-05-25")
+	datetime19950914, _ = sheetdb.NewDate("1995-09-14")
 )
+
+func _() {
+	// Run tests only for code generated in test mode.
+	_ = sample.TestMode_User
+	_ = sample.TestMode_Foo
+	_ = sample.TestMode_FooChild
+	_ = sample.TestMode_Bar
+	_ = sample.TestMode_TypeTest
+}
 
 func TestMain(m *testing.M) {
 

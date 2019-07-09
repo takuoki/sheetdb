@@ -88,6 +88,11 @@ func (g *generator) outputConst(m model, o option) {
 		g.Printf("\t_%s_numOfDirectChildren = %d\n", m.Name, len(m.DirectChildrenNames))
 	}
 
+	if o.TestMode {
+		g.Printf("\n\t\n// Output only when test mode\n")
+		g.Printf("\tTestMode_%s = 0\n", m.Name)
+	}
+
 	g.Printf(")\n\n")
 }
 
@@ -265,10 +270,10 @@ func (g *generator) outputGet(m model) {
 
 	g.Printf("// Get%[1]s returns a %[2]s by %[3]s.\n", m.Name, m.NameLower, m.ThisKeyName)
 	if m.Parent == nil {
-		g.Printf("// If it can not be found, this function returns sheetdb.NotFoundError.\n")
+		g.Printf("// If it can not be found, this function returns *sheetdb.NotFoundError.\n")
 		g.Printf("func Get%[1]s(%[2]s) (*%[1]s, error) {\n", m.Name, join(m.PkNameLowers, m.PkTypes, " ", ", "))
 	} else {
-		g.Printf("// If it can not be found, this method returns sheetdb.NotFoundError.\n")
+		g.Printf("// If it can not be found, this method returns *sheetdb.NotFoundError.\n")
 		g.Printf("func (m *%[2]s) Get%[1]s(%[3]s %[4]s) (*%[1]s, error) {\n", m.Name, m.Parent.Name, m.ThisKeyNameLower, m.ThisKeyType)
 	}
 
@@ -288,7 +293,7 @@ func (g *generator) outputGet(m model) {
 
 	if m.Parent != nil {
 		g.Printf("// Get%[1]s returns a %[2]s by primary keys.\n", m.Name, m.NameLower)
-		g.Printf("// If it can not be found, this function returns sheetdb.NotFoundError.\n")
+		g.Printf("// If it can not be found, this function returns *sheetdb.NotFoundError.\n")
 		g.Printf("func Get%[1]s(%[2]s) (*%[1]s, error) {\n", m.Name, join(m.PkNameLowers, m.PkTypes, " ", ", "))
 		g.outputGetParent(*m.Parent, true, 0)
 		g.Printf("\treturn m.Get%s(%s)\n", m.Name, m.ThisKeyNameLower)
@@ -298,7 +303,7 @@ func (g *generator) outputGet(m model) {
 	for _, f := range m.Fields {
 		if f.Unique {
 			g.Printf("// Get%[1]sBy%[3]s returns a %[2]s by %[3]s.\n", m.Name, m.NameLower, f.Name)
-			g.Printf("// If it can not be found, this function returns sheetdb.NotFoundError.\n")
+			g.Printf("// If it can not be found, this function returns *sheetdb.NotFoundError.\n")
 			g.Printf("func Get%[1]sBy%[2]s(%[3]s %[4]s) (*%[1]s, error) {\n", m.Name, f.Name, f.NameLower, f.Typ)
 			g.Printf("\t_%s_mutex.RLock()\n", m.Name)
 			g.Printf("\tdefer _%s_mutex.RUnlock()\n", m.Name)
@@ -430,7 +435,7 @@ func (g *generator) outputAdd(m model, o option) {
 			g.Printf("// If any fields are invalid, this function returns error.\n")
 			g.Printf("func Add%[1]s(%[2]s) (*%[1]s, error) {\n", m.Name, join(m.NonPkNameLowers, m.NonPkTypes, " ", ", "))
 		} else {
-			g.Printf("// If argument '%s' already exist, this function returns sheetdb.DuplicationError.\n", m.ThisKeyNameLower)
+			g.Printf("// If argument '%s' already exist, this function returns *sheetdb.DuplicationError.\n", m.ThisKeyNameLower)
 			g.Printf("// If any fields are invalid, this function returns error.\n")
 			g.Printf("func Add%[1]s(%[2]s %[3]s, %[4]s) (*%[1]s, error) {\n", m.Name, m.ThisKeyNameLower, m.ThisKeyType, join(m.NonPkNameLowers, m.NonPkTypes, " ", ", "))
 		}
@@ -441,7 +446,7 @@ func (g *generator) outputAdd(m model, o option) {
 			g.Printf("// If any fields are invalid, this method returns error.\n")
 			g.Printf("func (m *%[2]s) Add%[1]s(%[3]s) (*%[1]s, error) {\n", m.Name, m.Parent.Name, join(m.NonPkNameLowers, m.NonPkTypes, " ", ", "))
 		} else {
-			g.Printf("// If argument '%s' already exists in this %s, this method returns sheetdb.DuplicationError.\n", m.ThisKeyNameLower, m.Parent.NameLower)
+			g.Printf("// If argument '%s' already exists in this %s, this method returns *sheetdb.DuplicationError.\n", m.ThisKeyNameLower, m.Parent.NameLower)
 			g.Printf("// If any fields are invalid, this method returns error.\n")
 			g.Printf("func (m *%[4]s) Add%[1]s(%[2]s %[3]s, %[5]s) (*%[1]s, error) {\n", m.Name, m.ThisKeyNameLower, m.ThisKeyType, m.Parent.Name, join(m.NonPkNameLowers, m.NonPkTypes, " ", ", "))
 		}
@@ -528,7 +533,7 @@ func (g *generator) outputAdd(m model, o option) {
 			g.Printf("// If any fields are invalid, this function returns error.\n")
 			g.Printf("func Add%[1]s(%[2]s, %[3]s) (*%[1]s, error) {\n", m.Name, join(m.Parent.PkNameLowers, m.Parent.PkTypes, " ", ", "), join(m.NonPkNameLowers, m.NonPkTypes, " ", ", "))
 		} else {
-			g.Printf("// If primary keys already exist, this function returns sheetdb.DuplicationError.\n")
+			g.Printf("// If primary keys already exist, this function returns *sheetdb.DuplicationError.\n")
 			g.Printf("// If any fields are invalid, this function returns error.\n")
 			g.Printf("func Add%[1]s(%[2]s) (*%[1]s, error) {\n", m.Name, join(m.FieldNameLowers, m.FieldTypes, " ", ", "))
 		}
@@ -546,12 +551,12 @@ func (g *generator) outputUpdate(m model) {
 
 	if m.Parent == nil {
 		g.Printf("// Update%s updates %s.\n", m.Name, m.NameLower)
-		g.Printf("// If it can not be found, this function returns sheetdb.NotFoundError.\n")
+		g.Printf("// If it can not be found, this function returns *sheetdb.NotFoundError.\n")
 		g.Printf("// If any fields are invalid, this function returns error.\n")
 		g.Printf("func Update%[1]s(%[2]s) (*%[1]s, error) {\n", m.Name, join(m.FieldNameLowers, m.FieldTypes, " ", ", "))
 	} else {
 		g.Printf("// Update%s updates %s.\n", m.Name, m.NameLower)
-		g.Printf("// If it can not be found, this method returns sheetdb.NotFoundError.\n")
+		g.Printf("// If it can not be found, this method returns *sheetdb.NotFoundError.\n")
 		g.Printf("// If any fields are invalid, this method returns error.\n")
 		g.Printf("func (m *%[2]s) Update%[1]s(%[3]s %[4]s, %[5]s) (*%[1]s, error) {\n", m.Name, m.Parent.Name, m.ThisKeyNameLower, m.ThisKeyType, join(m.NonPkNameLowers, m.NonPkTypes, " ", ", "))
 	}
@@ -601,7 +606,7 @@ func (g *generator) outputUpdate(m model) {
 		}
 	}
 
-	g.Printf("\t%[1]s = &%[1]sCopy\n", m.NameLower)
+	g.Printf("\t*%[1]s = %[1]sCopy\n", m.NameLower)
 	for _, f := range m.Fields {
 		if f.Unique {
 			g.Printf("\t_%[1]s_%[3]s_uniqueMap[%[2]sCopy.%[3]s] = &%[2]sCopy\n", m.Name, m.NameLower, f.Name)
@@ -612,7 +617,7 @@ func (g *generator) outputUpdate(m model) {
 
 	if m.Parent != nil {
 		g.Printf("// Update%s updates %s.\n", m.Name, m.NameLower)
-		g.Printf("// If it can not be found, this function returns sheetdb.NotFoundError.\n")
+		g.Printf("// If it can not be found, this function returns *sheetdb.NotFoundError.\n")
 		g.Printf("// If any fields are invalid, this function returns error.\n")
 		g.Printf("func Update%[1]s(%[2]s) (*%[1]s, error) {\n", m.Name, join(m.FieldNameLowers, m.FieldTypes, " ", ", "))
 		g.outputGetParent(*m.Parent, true, 0)
@@ -631,7 +636,7 @@ func (g *generator) outputDelete(m model) {
 		} else {
 			g.Printf("// Delete%[1]s deletes %[2]s and it's children %[3]s and %[4]s.\n", m.Name, m.NameLower, strings.Join(m.ChildrenNameLowers[:len(m.Children)-1], ", "), m.ChildrenNameLowers[len(m.Children)-1])
 		}
-		g.Printf("// If it can not be found, this function returns sheetdb.NotFoundError.\n")
+		g.Printf("// If it can not be found, this function returns *sheetdb.NotFoundError.\n")
 		g.Printf("func Delete%[1]s(%[2]s %[3]s) error {\n", m.Name, m.ThisKeyNameLower, m.ThisKeyType)
 	} else {
 		if len(m.Children) == 0 {
@@ -641,7 +646,7 @@ func (g *generator) outputDelete(m model) {
 		} else {
 			g.Printf("// Delete%[1]s deletes %[2]s and it's children %[4]s and %[5]s from %[3]s.\n", m.Name, m.NameLower, m.Parent.NameLower, strings.Join(m.ChildrenNameLowers[:len(m.Children)-1], ", "), m.ChildrenNameLowers[len(m.Children)-1])
 		}
-		g.Printf("// If it can not be found, this method returns sheetdb.NotFoundError.\n")
+		g.Printf("// If it can not be found, this method returns *sheetdb.NotFoundError.\n")
 		g.Printf("func (m *%[2]s) Delete%[1]s(%[3]s %[4]s) error {\n", m.Name, m.Parent.Name, m.ThisKeyNameLower, m.ThisKeyType)
 	}
 
@@ -713,7 +718,7 @@ func (g *generator) outputDelete(m model) {
 		} else {
 			g.Printf("// Delete%[1]s deletes %[2]s and it's children %[4]s and %[5]s from %[3]s.\n", m.Name, m.NameLower, m.Parent.NameLower, strings.Join(m.ChildrenNameLowers[:len(m.Children)-1], ", "), m.ChildrenNameLowers[len(m.Children)-1])
 		}
-		g.Printf("// If it can not be found, this function returns sheetdb.NotFoundError.\n")
+		g.Printf("// If it can not be found, this function returns *sheetdb.NotFoundError.\n")
 
 		g.Printf("func Delete%[1]s(%[2]s) error {\n", m.Name, join(m.PkNameLowers, m.PkTypes, " ", ", "))
 		g.outputGetParent(*m.Parent, false, 0)

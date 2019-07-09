@@ -30,6 +30,13 @@ jobs:
           key: golint
           paths:
             - /go/bin/golint
+      # re-generate code for test
+      - run:
+          name: Re-generating for test
+          command: |
+            go install ./tools/sheetdb-modeler/
+            export TESTMODE=on
+            go generate ./sample/
       # go vet
       - run:
           name: Checking go vet
@@ -39,9 +46,6 @@ jobs:
       - run:
           name: Testing
           command: |
-            go install ./tools/sheetdb-modeler/
-            export TESTMODE=on
-            go generate ./sample/
             go test -v -race -cover -coverprofile=coverage_sample.out ./sample/
             go tool cover -html=coverage_sample.out -o coverage_sample.html
       - run:

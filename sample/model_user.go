@@ -122,7 +122,7 @@ func _User_load(data *gsheets.Sheet) error {
 }
 
 // GetUser returns a user by UserID.
-// If it can not be found, this function returns sheetdb.NotFoundError.
+// If it can not be found, this function returns *sheetdb.NotFoundError.
 func GetUser(userID int) (*User, error) {
 	_User_mutex.RLock()
 	defer _User_mutex.RUnlock()
@@ -133,7 +133,7 @@ func GetUser(userID int) (*User, error) {
 }
 
 // GetUserByEmail returns a user by Email.
-// If it can not be found, this function returns sheetdb.NotFoundError.
+// If it can not be found, this function returns *sheetdb.NotFoundError.
 func GetUserByEmail(email string) (*User, error) {
 	_User_mutex.RLock()
 	defer _User_mutex.RUnlock()
@@ -231,7 +231,7 @@ func AddUser(name string, email string, sex Sex, birthday *sheetdb.Date) (*User,
 }
 
 // UpdateUser updates user.
-// If it can not be found, this function returns sheetdb.NotFoundError.
+// If it can not be found, this function returns *sheetdb.NotFoundError.
 // If any fields are invalid, this function returns error.
 func UpdateUser(userID int, name string, email string, sex Sex, birthday *sheetdb.Date) (*User, error) {
 	_User_mutex.Lock()
@@ -257,13 +257,13 @@ func UpdateUser(userID int, name string, email string, sex Sex, birthday *sheetd
 	if userCopy.Email != user.Email {
 		delete(_User_Email_uniqueMap, user.Email)
 	}
-	user = &userCopy
+	*user = userCopy
 	_User_Email_uniqueMap[userCopy.Email] = &userCopy
 	return user, nil
 }
 
 // DeleteUser deletes user and it's children foo, fooChild and bar.
-// If it can not be found, this function returns sheetdb.NotFoundError.
+// If it can not be found, this function returns *sheetdb.NotFoundError.
 func DeleteUser(userID int) error {
 	_User_mutex.Lock()
 	defer _User_mutex.Unlock()

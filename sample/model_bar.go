@@ -107,7 +107,7 @@ func _Bar_load(data *gsheets.Sheet) error {
 }
 
 // GetBar returns a bar by Datetime.
-// If it can not be found, this method returns sheetdb.NotFoundError.
+// If it can not be found, this method returns *sheetdb.NotFoundError.
 func (m *User) GetBar(datetime sheetdb.Datetime) (*Bar, error) {
 	_Bar_mutex.RLock()
 	defer _Bar_mutex.RUnlock()
@@ -118,7 +118,7 @@ func (m *User) GetBar(datetime sheetdb.Datetime) (*Bar, error) {
 }
 
 // GetBar returns a bar by primary keys.
-// If it can not be found, this function returns sheetdb.NotFoundError.
+// If it can not be found, this function returns *sheetdb.NotFoundError.
 func GetBar(userID int, datetime sheetdb.Datetime) (*Bar, error) {
 	m, err := GetUser(userID)
 	if err != nil {
@@ -198,7 +198,7 @@ func GetBars(userID int, opts ...BarQueryOption) ([]*Bar, error) {
 }
 
 // AddBar adds new bar to user.
-// If argument 'datetime' already exists in this user, this method returns sheetdb.DuplicationError.
+// If argument 'datetime' already exists in this user, this method returns *sheetdb.DuplicationError.
 // If any fields are invalid, this method returns error.
 func (m *User) AddBar(datetime sheetdb.Datetime, value float32, note string) (*Bar, error) {
 	_Bar_mutex.Lock()
@@ -229,7 +229,7 @@ func (m *User) AddBar(datetime sheetdb.Datetime, value float32, note string) (*B
 }
 
 // AddBar adds new bar to user.
-// If primary keys already exist, this function returns sheetdb.DuplicationError.
+// If primary keys already exist, this function returns *sheetdb.DuplicationError.
 // If any fields are invalid, this function returns error.
 func AddBar(userID int, datetime sheetdb.Datetime, value float32, note string) (*Bar, error) {
 	m, err := GetUser(userID)
@@ -240,7 +240,7 @@ func AddBar(userID int, datetime sheetdb.Datetime, value float32, note string) (
 }
 
 // UpdateBar updates bar.
-// If it can not be found, this method returns sheetdb.NotFoundError.
+// If it can not be found, this method returns *sheetdb.NotFoundError.
 // If any fields are invalid, this method returns error.
 func (m *User) UpdateBar(datetime sheetdb.Datetime, value float32, note string) (*Bar, error) {
 	_Bar_mutex.Lock()
@@ -258,12 +258,12 @@ func (m *User) UpdateBar(datetime sheetdb.Datetime, value float32, note string) 
 	if err := (&barCopy)._asyncUpdate(); err != nil {
 		return nil, err
 	}
-	bar = &barCopy
+	*bar = barCopy
 	return bar, nil
 }
 
 // UpdateBar updates bar.
-// If it can not be found, this function returns sheetdb.NotFoundError.
+// If it can not be found, this function returns *sheetdb.NotFoundError.
 // If any fields are invalid, this function returns error.
 func UpdateBar(userID int, datetime sheetdb.Datetime, value float32, note string) (*Bar, error) {
 	m, err := GetUser(userID)
@@ -274,7 +274,7 @@ func UpdateBar(userID int, datetime sheetdb.Datetime, value float32, note string
 }
 
 // DeleteBar deletes bar from user.
-// If it can not be found, this method returns sheetdb.NotFoundError.
+// If it can not be found, this method returns *sheetdb.NotFoundError.
 func (m *User) DeleteBar(datetime sheetdb.Datetime) error {
 	_Bar_mutex.Lock()
 	defer _Bar_mutex.Unlock()
@@ -290,7 +290,7 @@ func (m *User) DeleteBar(datetime sheetdb.Datetime) error {
 }
 
 // DeleteBar deletes bar from user.
-// If it can not be found, this function returns sheetdb.NotFoundError.
+// If it can not be found, this function returns *sheetdb.NotFoundError.
 func DeleteBar(userID int, datetime sheetdb.Datetime) error {
 	m, err := GetUser(userID)
 	if err != nil {
