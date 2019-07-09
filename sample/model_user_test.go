@@ -46,30 +46,28 @@ func TestGetUser(t *testing.T) {
 			user, err := sample.GetUser(c.id)
 			if !c.notFound {
 				if err != nil {
-					t.Errorf("User must be found (case: %s)", casename)
-					return
+					t.Fatalf("User must be found (case: %s)", casename)
 				}
 				if user.Name != c.name {
-					t.Errorf("Name does not match expected (case: %s, expected=%s, actual=%s)", casename, c.name, user.Name)
+					t.Fatalf("Name does not match expected (case: %s, expected=%s, actual=%s)", casename, c.name, user.Name)
 				}
 				if user.Email != c.email {
-					t.Errorf("Email does not match expected (case: %s, expected=%s, actual=%s)", casename, c.email, user.Email)
+					t.Fatalf("Email does not match expected (case: %s, expected=%s, actual=%s)", casename, c.email, user.Email)
 				}
 				if user.Sex != c.sex {
-					t.Errorf("Sex does not match expected (case: %s, expected=%s, actual=%s)", casename, c.sex, user.Sex)
+					t.Fatalf("Sex does not match expected (case: %s, expected=%s, actual=%s)", casename, c.sex, user.Sex)
 				}
 				if !reflect.DeepEqual(user.Birthday, c.birthday) {
-					t.Errorf("Birthday does not match expected (case: %s, expected=%+v, actual=%+v)", casename, c.birthday, user.Birthday)
+					t.Fatalf("Birthday does not match expected (case: %s, expected=%+v, actual=%+v)", casename, c.birthday, user.Birthday)
 				}
 			} else {
 				if err == nil {
-					t.Errorf("Error must occur (case: %s)", casename)
-					return
+					t.Fatalf("Error must occur (case: %s)", casename)
 				}
 				if e, ok := err.(*sheetdb.NotFoundError); !ok {
-					t.Errorf("Error must be sheetd.NotFoundError (case: %s, actual=%T)", casename, err)
+					t.Fatalf("Error must be sheetd.NotFoundError (case: %s, actual=%T)", casename, err)
 				} else if e.Model != "User" {
-					t.Errorf("Error model must be 'User' (case: %s, actual=%s)", casename, e.Model)
+					t.Fatalf("Error model must be 'User' (case: %s, actual=%s)", casename, e.Model)
 				}
 			}
 		})
@@ -102,24 +100,22 @@ func TestGetUseryEmail(t *testing.T) {
 			user, err := sample.GetUserByEmail(c.email)
 			if !c.notFound {
 				if err != nil {
-					t.Errorf("User must be found (case: %s)", casename)
-					return
+					t.Fatalf("User must be found (case: %s)", casename)
 				}
 				if user.UserID != c.id {
-					t.Errorf("UserID does not match expected (case: %s, expected=%d, actual=%d)", casename, c.id, user.UserID)
+					t.Fatalf("UserID does not match expected (case: %s, expected=%d, actual=%d)", casename, c.id, user.UserID)
 				}
 				if user.Name != c.name {
-					t.Errorf("Name does not match expected (case: %s, expected=%s, actual=%s)", casename, c.name, user.Name)
+					t.Fatalf("Name does not match expected (case: %s, expected=%s, actual=%s)", casename, c.name, user.Name)
 				}
 			} else {
 				if err == nil {
-					t.Errorf("Error must occur (case: %s)", casename)
-					return
+					t.Fatalf("Error must occur (case: %s)", casename)
 				}
 				if e, ok := err.(*sheetdb.NotFoundError); !ok {
-					t.Errorf("Error must be sheetd.NotFoundError (case: %s, actual=%T)", casename, err)
+					t.Fatalf("Error must be sheetd.NotFoundError (case: %s, actual=%T)", casename, err)
 				} else if e.Model != "User" {
-					t.Errorf("Error model must be 'User' (case: %s, actual=%s)", casename, e.Model)
+					t.Fatalf("Error model must be 'User' (case: %s, actual=%s)", casename, e.Model)
 				}
 			}
 		})
@@ -158,17 +154,17 @@ func TestGetUsers(t *testing.T) {
 		t.Run(casename, func(t *testing.T) {
 			users, err := sample.GetUsers(sample.UserFilter(c.filterFunc), sample.UserSort(c.sortFunc))
 			if err != nil {
-				t.Errorf("Error must not occur (case: %s, err=%v)", casename, err)
-				return
+				t.Fatalf("Error must not occur (case: %s, err=%v)", casename, err)
 			}
 			var userIDs []int
 			for _, user := range users {
 				userIDs = append(userIDs, user.UserID)
 			}
 			if len(users) != len(c.expectedIDs) {
-				t.Errorf("The number of users does not match expected (case: %s, expected=%v, actual=%v)", casename, c.expectedIDs, userIDs)
-			} else if c.sortFunc != nil && !reflect.DeepEqual(userIDs, c.expectedIDs) {
-				t.Errorf("The order of users does not match expected (case: %s, expected=%v, actual=%v)", casename, c.expectedIDs, userIDs)
+				t.Fatalf("The number of users does not match expected (case: %s, expected=%v, actual=%v)", casename, c.expectedIDs, userIDs)
+			}
+			if c.sortFunc != nil && !reflect.DeepEqual(userIDs, c.expectedIDs) {
+				t.Fatalf("The order of users does not match expected (case: %s, expected=%v, actual=%v)", casename, c.expectedIDs, userIDs)
 			}
 		})
 	}
@@ -223,39 +219,31 @@ func TestAddUser(t *testing.T) {
 			user, err := sample.AddUser(c.name, c.email, c.sex, c.birthday)
 			if c.err == nil {
 				if err != nil {
-					t.Errorf("Error must not occur in AddUser (case: %s, err=%v)", casename, err)
-					return
+					t.Fatalf("Error must not occur in AddUser (case: %s, err=%v)", casename, err)
 				}
 				if !reflect.DeepEqual(user, &c.expectedUser) {
-					t.Errorf("User that AddUser returns does not match expected (case: %s, expected=%+v, actual=%+v)", casename, &c.expectedUser, user)
-					return
+					t.Fatalf("User that AddUser returns does not match expected (case: %s, expected=%+v, actual=%+v)", casename, &c.expectedUser, user)
 				}
 				user, err := sample.GetUser(c.expectedUser.UserID)
 				if err != nil {
-					t.Errorf("Error must not occur in GetUser (case: %s, err=%v)", casename, err)
-					return
+					t.Fatalf("Error must not occur in GetUser (case: %s, err=%v)", casename, err)
 				}
 				if !reflect.DeepEqual(user, &c.expectedUser) {
-					t.Errorf("User that GetUser returns does not match expected (case: %s, expected=%+v, actual=%+v)", casename, &c.expectedUser, user)
-					return
+					t.Fatalf("User that GetUser returns does not match expected (case: %s, expected=%+v, actual=%+v)", casename, &c.expectedUser, user)
 				}
 				user, err = sample.GetUserByEmail(c.expectedUser.Email)
 				if err != nil {
-					t.Errorf("Error must not occur in GetUserByEmail (case: %s, err=%v)", casename, err)
-					return
+					t.Fatalf("Error must not occur in GetUserByEmail (case: %s, err=%v)", casename, err)
 				}
 				if !reflect.DeepEqual(user, &c.expectedUser) {
-					t.Errorf("User that GetUserByEmail returns does not match expected (case: %s, expected=%+v, actual=%+v)", casename, &c.expectedUser, user)
-					return
+					t.Fatalf("User that GetUserByEmail returns does not match expected (case: %s, expected=%+v, actual=%+v)", casename, &c.expectedUser, user)
 				}
 			} else {
 				if err == nil {
-					t.Errorf("Error must occur (case: %s)", casename)
-					return
+					t.Fatalf("Error must occur (case: %s)", casename)
 				}
 				if !reflect.DeepEqual(err, c.err) {
-					t.Errorf("Error does not match expected (case: %s, expected=%+v, actual=%+v)", casename, c.err, err)
-					return
+					t.Fatalf("Error does not match expected (case: %s, expected=%+v, actual=%+v)", casename, c.err, err)
 				}
 			}
 		})
@@ -335,45 +323,36 @@ func TestUpdateUser(t *testing.T) {
 			user, err := sample.UpdateUser(c.id, c.name, c.email, c.sex, c.birthday)
 			if c.err == nil {
 				if err != nil {
-					t.Errorf("Error must not occur in UpdateUser (case: %s, err=%v)", casename, err)
-					return
+					t.Fatalf("Error must not occur in UpdateUser (case: %s, err=%v)", casename, err)
 				}
 				if !reflect.DeepEqual(user, &c.expectedUser) {
-					t.Errorf("User that UpdateUser returns does not match expected (case: %s, expected=%+v, actual=%+v)", casename, &c.expectedUser, user)
-					return
+					t.Fatalf("User that UpdateUser returns does not match expected (case: %s, expected=%+v, actual=%+v)", casename, &c.expectedUser, user)
 				}
 				user, err := sample.GetUser(c.id)
 				if err != nil {
-					t.Errorf("Error must not occur in GetUser (case: %s, err=%v)", casename, err)
-					return
+					t.Fatalf("Error must not occur in GetUser (case: %s, err=%v)", casename, err)
 				}
 				if !reflect.DeepEqual(user, &c.expectedUser) {
-					t.Errorf("User that GetUser returns does not match expected (case: %s, expected=%+v, actual=%+v)", casename, &c.expectedUser, user)
-					return
+					t.Fatalf("User that GetUser returns does not match expected (case: %s, expected=%+v, actual=%+v)", casename, &c.expectedUser, user)
 				}
 				user, err = sample.GetUserByEmail(c.email)
 				if err != nil {
-					t.Errorf("Error must not occur in GetUserByEmail (case: %s, err=%v)", casename, err)
-					return
+					t.Fatalf("Error must not occur in GetUserByEmail (case: %s, err=%v)", casename, err)
 				}
 				if !reflect.DeepEqual(user, &c.expectedUser) {
-					t.Errorf("User that GetUserByEmail returns does not match expected (case: %s, expected=%+v, actual=%+v)", casename, &c.expectedUser, user)
-					return
+					t.Fatalf("User that GetUserByEmail returns does not match expected (case: %s, expected=%+v, actual=%+v)", casename, &c.expectedUser, user)
 				}
 				if c.email != oldUser.Email {
 					if _, err := sample.GetUserByEmail(oldUser.Email); !reflect.DeepEqual(err, &sheetdb.NotFoundError{Model: "User"}) {
-						t.Errorf("Error must occur when GetUserByEmail is called by old email (case: %s, err=%v)", casename, err)
-						return
+						t.Fatalf("Error must occur when GetUserByEmail is called by old email (case: %s, err=%v)", casename, err)
 					}
 				}
 			} else {
 				if err == nil {
-					t.Errorf("Error must occur (case: %s)", casename)
-					return
+					t.Fatalf("Error must occur (case: %s)", casename)
 				}
 				if !reflect.DeepEqual(err, c.err) {
-					t.Errorf("Error does not match expected (case: %s, expected=%+v, actual=%+v)", casename, c.err, err)
-					return
+					t.Fatalf("Error does not match expected (case: %s, expected=%+v, actual=%+v)", casename, c.err, err)
 				}
 			}
 		})
@@ -413,80 +392,66 @@ func TestDeleteUser(t *testing.T) {
 			// pre-check
 			if c.err == nil {
 				if _, err := sample.GetUserByEmail(c.email); err != nil {
-					t.Errorf("[Pre-check] Error must not occur in GetUserByEmail (case: %s, email=%s, err=%v)", casename, c.email, err)
-					return
+					t.Fatalf("[Pre-check] Error must not occur in GetUserByEmail (case: %s, email=%s, err=%v)", casename, c.email, err)
 				}
 				for _, fooID := range c.fooIDs {
 					if _, err := sample.GetFoo(c.id, fooID); err != nil {
-						t.Errorf("[Pre-check] Error must not occur in GetFoo (case: %s, fooID=%d, err=%v)", casename, fooID, err)
-						return
+						t.Fatalf("[Pre-check] Error must not occur in GetFoo (case: %s, fooID=%d, err=%v)", casename, fooID, err)
 					}
 				}
 				for _, id := range c.fooChildIDs {
 					if _, err := sample.GetFooChild(c.id, id[0], id[1]); err != nil {
-						t.Errorf("[Pre-check] Error must not occur in GetFooChild (case: %s, fooID=%d, fooChildID=%d, err=%v)", casename, id[0], id[1], err)
-						return
+						t.Fatalf("[Pre-check] Error must not occur in GetFooChild (case: %s, fooID=%d, fooChildID=%d, err=%v)", casename, id[0], id[1], err)
 					}
 				}
 				for _, v := range c.fooChildValues {
 					if _, err := sample.GetFooChildByValue(v); err != nil {
-						t.Errorf("[Pre-check] Error must not occur in GetFooChildByValue (case: %s, value=%s, err=%v)", casename, v, err)
-						return
+						t.Fatalf("[Pre-check] Error must not occur in GetFooChildByValue (case: %s, value=%s, err=%v)", casename, v, err)
 					}
 				}
 				for _, barID := range c.barIDs {
 					if _, err := sample.GetBar(c.id, barID); err != nil {
-						t.Errorf("[Pre-check] Error must not occur in GetBar (case: %s, barID=%s, err=%v)", casename, barID, err)
-						return
+						t.Fatalf("[Pre-check] Error must not occur in GetBar (case: %s, barID=%s, err=%v)", casename, barID, err)
 					}
 				}
 			}
 			err := sample.DeleteUser(c.id)
 			if c.err == nil {
 				if err != nil {
-					t.Errorf("Error must not occur in DeleteUser (case: %s, err=%v)", casename, err)
-					return
+					t.Fatalf("Error must not occur in DeleteUser (case: %s, err=%v)", casename, err)
 				}
 				if _, err := sample.GetUser(c.id); !reflect.DeepEqual(err, &sheetdb.NotFoundError{Model: "User"}) {
-					t.Errorf("Error in GetUser does not match expected (case: %s, err=%v)", casename, err)
-					return
+					t.Fatalf("Error in GetUser does not match expected (case: %s, err=%v)", casename, err)
 				}
 				if _, err := sample.GetUserByEmail(c.email); !reflect.DeepEqual(err, &sheetdb.NotFoundError{Model: "User"}) {
-					t.Errorf("Error in GetUserByEmail does not match expected (case: %s, email=%s, err=%v)", casename, c.email, err)
-					return
+					t.Fatalf("Error in GetUserByEmail does not match expected (case: %s, email=%s, err=%v)", casename, c.email, err)
 				}
 				for _, fooID := range c.fooIDs {
 					if _, err := sample.GetFoo(c.id, fooID); !reflect.DeepEqual(err, &sheetdb.NotFoundError{Model: "User"}) {
-						t.Errorf("Error in GetFoo does not match expected (case: %s, fooID=%d, err=%v)", casename, fooID, err)
-						return
+						t.Fatalf("Error in GetFoo does not match expected (case: %s, fooID=%d, err=%v)", casename, fooID, err)
 					}
 				}
 				for _, id := range c.fooChildIDs {
 					if _, err := sample.GetFooChild(c.id, id[0], id[1]); !reflect.DeepEqual(err, &sheetdb.NotFoundError{Model: "User"}) {
-						t.Errorf("Error in GetFooChild does not match expected (case: %s, fooID=%d, fooChildID=%d, err=%v)", casename, id[0], id[1], err)
-						return
+						t.Fatalf("Error in GetFooChild does not match expected (case: %s, fooID=%d, fooChildID=%d, err=%v)", casename, id[0], id[1], err)
 					}
 				}
 				for _, v := range c.fooChildValues {
 					if _, err := sample.GetFooChildByValue(v); !reflect.DeepEqual(err, &sheetdb.NotFoundError{Model: "FooChild"}) {
-						t.Errorf("Error in GetFooChildByValue does not match expected (case: %s, value=%s, err=%v)", casename, v, err)
-						return
+						t.Fatalf("Error in GetFooChildByValue does not match expected (case: %s, value=%s, err=%v)", casename, v, err)
 					}
 				}
 				for _, barID := range c.barIDs {
 					if _, err := sample.GetBar(c.id, barID); !reflect.DeepEqual(err, &sheetdb.NotFoundError{Model: "User"}) {
-						t.Errorf("Error in GetBar does not match expected (case: %s, barID=%s, err=%v)", casename, barID, err)
-						return
+						t.Fatalf("Error in GetBar does not match expected (case: %s, barID=%s, err=%v)", casename, barID, err)
 					}
 				}
 			} else {
 				if err == nil {
-					t.Errorf("Error must occur (case: %s)", casename)
-					return
+					t.Fatalf("Error must occur (case: %s)", casename)
 				}
 				if !reflect.DeepEqual(err, c.err) {
-					t.Errorf("Error does not match expected (case: %s, expected=%+v, actual=%+v)", casename, c.err, err)
-					return
+					t.Fatalf("Error does not match expected (case: %s, expected=%+v, actual=%+v)", casename, c.err, err)
 				}
 			}
 		})
