@@ -9,6 +9,93 @@ import (
 	"github.com/takuoki/sheetdb/sample"
 )
 
+func TestLoadUser(t *testing.T) {
+	cases := map[string]struct {
+		data  [][]interface{}
+		count int
+		err   error
+	}{
+		"no-data": {
+			data: [][]interface{}{
+				{},
+			},
+			count: 0,
+		},
+		"ignore-data": {
+			data: [][]interface{}{
+				{"10001", "Jorge B. Farley", "jorge.b.farley@sample.com", "MALE", "1959-05-25", "2019-07-07T00:00:00.000Z", ""},
+				{"", "Guillermo L. Shanks", "guillermo.l.shanks@sample.com", "MALE", "1977-10-17", "2019-07-07T00:00:00.000Z", ""}, // skipped
+				{"10003", "Kathy M. Fisher", "kathy.m.fisher@sample.com", "FEMALE", "1983-08-06", "2019-07-07T00:00:00.000Z", ""},  // ignored
+			},
+			count: 1,
+		},
+		"user-id-invalid": {
+			data: [][]interface{}{
+				{"a", "Jorge B. Farley", "jorge.b.farley@sample.com", "MALE", "1959-05-25", "2019-07-07T00:00:00.000Z", ""},
+			},
+			err: &sheetdb.InvalidValueError{FieldName: "UserID"},
+		},
+		"name-invalid": {
+			data: [][]interface{}{
+				{"10001", "", "jorge.b.farley@sample.com", "MALE", "1959-05-25", "2019-07-07T00:00:00.000Z", ""},
+			},
+			err: &sheetdb.EmptyStringError{FieldName: "Name"},
+		},
+		"email-invalid": {
+			data: [][]interface{}{
+				{"10001", "Jorge B. Farley", "", "MALE", "1959-05-25", "2019-07-07T00:00:00.000Z", ""},
+			},
+			err: &sheetdb.EmptyStringError{FieldName: "Email"},
+		},
+		"sex-invalid": {
+			data: [][]interface{}{
+				{"10001", "Jorge B. Farley", "jorge.b.farley@sample.com", "INVALID", "1959-05-25", "2019-07-07T00:00:00.000Z", ""},
+			},
+			err: &sheetdb.InvalidValueError{FieldName: "Sex"},
+		},
+		"birthday-invalid": {
+			data: [][]interface{}{
+				{"10001", "Jorge B. Farley", "jorge.b.farley@sample.com", "MALE", "INVALID", "2019-07-07T00:00:00.000Z", ""},
+			},
+			err: &sheetdb.InvalidValueError{FieldName: "Birthday"},
+		},
+		"user-id-duplicate": {
+			data: [][]interface{}{
+				{"10001", "Jorge B. Farley", "jorge.b.farley@sample.com", "MALE", "1959-05-25", "2019-07-07T00:00:00.000Z", ""},
+				{"10001", "Guillermo L. Shanks", "guillermo.l.shanks@sample.com", "MALE", "1977-10-17", "2019-07-07T00:00:00.000Z", ""},
+			},
+			err: &sheetdb.DuplicationError{FieldName: "UserID"},
+		},
+	}
+
+	for casename, c := range cases {
+		t.Run(casename, func(t *testing.T) {
+			err := sample.LoadUser(t, c.data)
+			if c.err == nil {
+				if err != nil {
+					t.Fatalf("Error must not occur (case: %s)", casename)
+				}
+				users, _ := sample.GetUsers()
+				if cnt := len(users); cnt != c.count {
+					t.Fatalf("The number of loaded users does not match expected (case: %s, expected: %d, actual: %d)", casename, c.count, cnt)
+				}
+			} else {
+				aierr, ok1 := err.(*sheetdb.InvalidValueError)
+				eierr, ok2 := c.err.(*sheetdb.InvalidValueError)
+				if ok1 && ok2 {
+					if aierr.FieldName != eierr.FieldName {
+						t.Fatalf("FieldName of InvalidValueError does not match expected (case: %s, expected=%s, actual=%s)", casename, eierr.FieldName, aierr.FieldName)
+					}
+				} else {
+					if !reflect.DeepEqual(err, c.err) {
+						t.Fatalf("Error does not match expected (case: %s, expected=%+v, actual=%+v)", casename, c.err, err)
+					}
+				}
+			}
+		})
+	}
+}
+
 func TestGetUser(t *testing.T) {
 	cases := map[string]struct {
 		id          int

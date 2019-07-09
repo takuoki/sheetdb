@@ -89,6 +89,10 @@ func _FooChild_load(data *gsheets.Sheet) error {
 			return err
 		}
 
+		if _, ok := _FooChild_cache[userID][fooID][childID]; ok {
+			return &sheetdb.DuplicationError{FieldName: "ChildID"}
+		}
+
 		fooChild := FooChild{
 			UserID:  userID,
 			FooID:   fooID,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/takuoki/gsheets"
 	"github.com/takuoki/sheetdb"
 )
 
@@ -27,6 +28,13 @@ var (
 	loadedTypeTestRowNoMap       = map[int]int{}       // map[id]rowNo
 	loadedTypeTestMaxRowNo       = 0
 )
+
+func LoadUser(t *testing.T, data [][]interface{}) error {
+	t.Helper()
+	// add header row
+	data = append([][]interface{}{{}}, data...)
+	return _User_load(gsheets.NewSheet(t, data))
+}
 
 func Reload(t *testing.T) {
 	t.Helper()

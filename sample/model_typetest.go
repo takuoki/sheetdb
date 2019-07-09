@@ -215,6 +215,10 @@ func _TypeTest_load(data *gsheets.Sheet) error {
 			return err
 		}
 
+		if _, ok := _TypeTest_cache[id]; ok {
+			return &sheetdb.DuplicationError{FieldName: "ID"}
+		}
+
 		typeTest := TypeTest{
 			ID:             id,
 			StringValue:    stringValue,
