@@ -259,7 +259,7 @@ func _TypeTest_load(data *gsheets.Sheet) error {
 }
 
 // GetTypeTest returns a typeTest by ID.
-// If it can not be found, this function returns sheetdb.NotFoundError.
+// If it can not be found, this function returns *sheetdb.NotFoundError.
 func GetTypeTest(id int) (*TypeTest, error) {
 	_TypeTest_mutex.RLock()
 	defer _TypeTest_mutex.RUnlock()
@@ -380,7 +380,7 @@ func AddTypeTest(stringValue string, boolValue bool, intValue int, int8Value int
 }
 
 // UpdateTypeTest updates typeTest.
-// If it can not be found, this function returns sheetdb.NotFoundError.
+// If it can not be found, this function returns *sheetdb.NotFoundError.
 // If any fields are invalid, this function returns error.
 func UpdateTypeTest(id int, stringValue string, boolValue bool, intValue int, int8Value int8, int16Value int16, int32Value int32, int64Value int64, uintValue uint, uint8Value uint8, uint16Value uint16, uint32Value uint32, uint64Value uint64, float32Value float32, float64Value float64, dateValue sheetdb.Date, datetimeValue sheetdb.Datetime, pBoolValue *bool, pIntValue *int, pInt8Value *int8, pInt16Value *int16, pInt32Value *int32, pInt64Value *int64, pUIntValue *uint, pUInt8Value *uint8, pUInt16Value *uint16, pUInt32Value *uint32, pUInt64Value *uint64, pFloat32Value *float32, pFloat64Value *float64, pDateValue *sheetdb.Date, pDatetimeValue *sheetdb.Datetime) (*TypeTest, error) {
 	_TypeTest_mutex.Lock()
@@ -427,12 +427,12 @@ func UpdateTypeTest(id int, stringValue string, boolValue bool, intValue int, in
 	if err := (&typeTestCopy)._asyncUpdate(); err != nil {
 		return nil, err
 	}
-	typeTest = &typeTestCopy
+	*typeTest = typeTestCopy
 	return typeTest, nil
 }
 
 // DeleteTypeTest deletes typeTest.
-// If it can not be found, this function returns sheetdb.NotFoundError.
+// If it can not be found, this function returns *sheetdb.NotFoundError.
 func DeleteTypeTest(id int) error {
 	_TypeTest_mutex.Lock()
 	defer _TypeTest_mutex.Unlock()

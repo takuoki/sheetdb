@@ -117,7 +117,7 @@ func _Foo_load(data *gsheets.Sheet) error {
 }
 
 // GetFoo returns a foo by FooID.
-// If it can not be found, this method returns sheetdb.NotFoundError.
+// If it can not be found, this method returns *sheetdb.NotFoundError.
 func (m *User) GetFoo(fooID int) (*Foo, error) {
 	_Foo_mutex.RLock()
 	defer _Foo_mutex.RUnlock()
@@ -128,7 +128,7 @@ func (m *User) GetFoo(fooID int) (*Foo, error) {
 }
 
 // GetFoo returns a foo by primary keys.
-// If it can not be found, this function returns sheetdb.NotFoundError.
+// If it can not be found, this function returns *sheetdb.NotFoundError.
 func GetFoo(userID int, fooID int) (*Foo, error) {
 	m, err := GetUser(userID)
 	if err != nil {
@@ -253,7 +253,7 @@ func AddFoo(userID int, value float32, note string) (*Foo, error) {
 }
 
 // UpdateFoo updates foo.
-// If it can not be found, this method returns sheetdb.NotFoundError.
+// If it can not be found, this method returns *sheetdb.NotFoundError.
 // If any fields are invalid, this method returns error.
 func (m *User) UpdateFoo(fooID int, value float32, note string) (*Foo, error) {
 	_Foo_mutex.Lock()
@@ -271,12 +271,12 @@ func (m *User) UpdateFoo(fooID int, value float32, note string) (*Foo, error) {
 	if err := (&fooCopy)._asyncUpdate(); err != nil {
 		return nil, err
 	}
-	foo = &fooCopy
+	*foo = fooCopy
 	return foo, nil
 }
 
 // UpdateFoo updates foo.
-// If it can not be found, this function returns sheetdb.NotFoundError.
+// If it can not be found, this function returns *sheetdb.NotFoundError.
 // If any fields are invalid, this function returns error.
 func UpdateFoo(userID int, fooID int, value float32, note string) (*Foo, error) {
 	m, err := GetUser(userID)
@@ -287,7 +287,7 @@ func UpdateFoo(userID int, fooID int, value float32, note string) (*Foo, error) 
 }
 
 // DeleteFoo deletes foo and it's children fooChild from user.
-// If it can not be found, this method returns sheetdb.NotFoundError.
+// If it can not be found, this method returns *sheetdb.NotFoundError.
 func (m *User) DeleteFoo(fooID int) error {
 	_Foo_mutex.Lock()
 	defer _Foo_mutex.Unlock()
@@ -310,7 +310,7 @@ func (m *User) DeleteFoo(fooID int) error {
 }
 
 // DeleteFoo deletes foo and it's children fooChild from user.
-// If it can not be found, this function returns sheetdb.NotFoundError.
+// If it can not be found, this function returns *sheetdb.NotFoundError.
 func DeleteFoo(userID int, fooID int) error {
 	m, err := GetUser(userID)
 	if err != nil {

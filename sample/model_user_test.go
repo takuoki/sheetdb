@@ -236,7 +236,7 @@ func TestAddUser(t *testing.T) {
 					return
 				}
 				if !reflect.DeepEqual(user, &c.expectedUser) {
-					t.Errorf("User that AddUser returns does not match expected (case: %s, expected=%+v, actual=%+v)", casename, c.expectedUser, user)
+					t.Errorf("User that AddUser returns does not match expected (case: %s, expected=%+v, actual=%+v)", casename, &c.expectedUser, user)
 					return
 				}
 				user, err := sample.GetUser(c.expectedUser.UserID)
@@ -245,8 +245,143 @@ func TestAddUser(t *testing.T) {
 					return
 				}
 				if !reflect.DeepEqual(user, &c.expectedUser) {
-					t.Errorf("User that GetUser returns does not match expected (case: %s, expected=%+v, actual=%+v)", casename, c.expectedUser, user)
+					t.Errorf("User that GetUser returns does not match expected (case: %s, expected=%+v, actual=%+v)", casename, &c.expectedUser, user)
 					return
+				}
+				user, err = sample.GetUserByEmail(c.expectedUser.Email)
+				if err != nil {
+					t.Errorf("Error must not occur in GetUserByEmail (case: %s, err=%v)", casename, err)
+					return
+				}
+				if !reflect.DeepEqual(user, &c.expectedUser) {
+					t.Errorf("User that GetUserByEmail returns does not match expected (case: %s, expected=%+v, actual=%+v)", casename, &c.expectedUser, user)
+					return
+				}
+				if err := sample.LoadData(context.Background()); err != nil {
+					t.Fatalf("Unable to load data from spreadsheet: %v", err)
+				}
+			} else {
+				if err == nil {
+					t.Errorf("Error must occur (case: %s)", casename)
+					return
+				}
+				if !reflect.DeepEqual(err, c.err) {
+					t.Errorf("Error does not match expected (case: %s, expected=%+v, actual=%+v)", casename, c.err, err)
+					return
+				}
+			}
+		})
+	}
+}
+
+func TestUpdateUser(t *testing.T) {
+	if err := sample.LoadData(context.Background()); err != nil {
+		t.Fatalf("Unable to load data from spreadsheet: %v", err)
+	}
+	cases := map[string]struct {
+		id           int
+		name, email  string
+		sex          sample.Sex
+		birthday     *sheetdb.Date
+		expectedUser sample.User
+		err          error
+	}{
+		"update-all": {
+			id:       10004,
+			name:     "Betty M. Sinclair",
+			email:    "betty.m.sinclair@sample.com",
+			sex:      sample.Female,
+			birthday: &datetime19590525,
+			expectedUser: sample.User{
+				UserID:   10004,
+				Name:     "Betty M. Sinclair",
+				Email:    "betty.m.sinclair@sample.com",
+				Sex:      sample.Female,
+				Birthday: &datetime19590525,
+			},
+		},
+		"update-name": {
+			id:       10004,
+			name:     "Betty M. Sinclair",
+			email:    "matthew.j.mclane@sample.com",
+			sex:      sample.Male,
+			birthday: &datetime19950914,
+			expectedUser: sample.User{
+				UserID:   10004,
+				Name:     "Betty M. Sinclair",
+				Email:    "matthew.j.mclane@sample.com",
+				Sex:      sample.Male,
+				Birthday: &datetime19950914,
+			},
+		},
+		"not-found": {
+			id:  10007,
+			err: &sheetdb.NotFoundError{Model: "User"},
+		},
+		"name-empty": {
+			id:       10004,
+			name:     "",
+			email:    "betty.m.sinclair@sample.com",
+			sex:      sample.Female,
+			birthday: &datetime19590525,
+			err:      &sheetdb.EmptyStringError{FieldName: "Name"},
+		},
+		"email-empty": {
+			id:       10004,
+			name:     "Betty M. Sinclair",
+			email:    "",
+			sex:      sample.Female,
+			birthday: &datetime19590525,
+			err:      &sheetdb.EmptyStringError{FieldName: "Email"},
+		},
+		"email-duplicate": {
+			id:       10004,
+			name:     "Betty M. Sinclair",
+			email:    "kathy.m.fisher@sample.com",
+			sex:      sample.Female,
+			birthday: &datetime19590525,
+			err:      &sheetdb.DuplicationError{FieldName: "Email"},
+		},
+	}
+	for casename, c := range cases {
+		t.Run(casename, func(t *testing.T) {
+			oldUser, _ := sample.GetUser(c.id)
+			user, err := sample.UpdateUser(c.id, c.name, c.email, c.sex, c.birthday)
+			if c.err == nil {
+				if err != nil {
+					t.Errorf("Error must not occur in UpdateUser (case: %s, err=%v)", casename, err)
+					return
+				}
+				if !reflect.DeepEqual(user, &c.expectedUser) {
+					t.Errorf("User that UpdateUser returns does not match expected (case: %s, expected=%+v, actual=%+v)", casename, &c.expectedUser, user)
+					return
+				}
+				user, err := sample.GetUser(c.id)
+				if err != nil {
+					t.Errorf("Error must not occur in GetUser (case: %s, err=%v)", casename, err)
+					return
+				}
+				if !reflect.DeepEqual(user, &c.expectedUser) {
+					t.Errorf("User that GetUser returns does not match expected (case: %s, expected=%+v, actual=%+v)", casename, &c.expectedUser, user)
+					return
+				}
+				user, err = sample.GetUserByEmail(c.email)
+				if err != nil {
+					t.Errorf("Error must not occur in GetUserByEmail (case: %s, err=%v)", casename, err)
+					return
+				}
+				if !reflect.DeepEqual(user, &c.expectedUser) {
+					t.Errorf("User that GetUserByEmail returns does not match expected (case: %s, expected=%+v, actual=%+v)", casename, &c.expectedUser, user)
+					return
+				}
+				if c.email != oldUser.Email {
+					if _, err := sample.GetUserByEmail(oldUser.Email); !reflect.DeepEqual(err, &sheetdb.NotFoundError{Model: "User"}) {
+						t.Errorf("Error must occur when GetUserByEmail is called by old email (case: %s, err=%v)", casename, err)
+						return
+					}
+				}
+				if err := sample.LoadData(context.Background()); err != nil {
+					t.Fatalf("Unable to load data from spreadsheet: %v", err)
 				}
 			} else {
 				if err == nil {
