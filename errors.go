@@ -36,5 +36,5 @@ type InvalidValueError struct {
 }
 
 func (e *InvalidValueError) Error() string {
-	return fmt.Sprintf("Value '%s' is invalid: %s", e.FieldName, e.Err)
+	return fmt.Sprintf("Value '%s' is invalid: %v", e.FieldName, e.Err)
 }

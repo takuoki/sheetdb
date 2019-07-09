@@ -2,6 +2,7 @@ package sample
 
 import (
 	"encoding/json"
+	"errors"
 )
 
 // Sex is user's sex.
@@ -21,8 +22,10 @@ func NewSex(sex string) (Sex, error) {
 		return Male, nil
 	case "Female", "female", "FEMALE":
 		return Female, nil
-	default:
+	case "Unknown", "unknown", "UNKNOWN", "":
 		return UnknownSex, nil
+	default:
+		return UnknownSex, errors.New("Invalid Sex")
 	}
 }
 

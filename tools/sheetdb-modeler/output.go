@@ -195,6 +195,10 @@ func (g *generator) outputLoad(m model) {
 	}
 	g.Printf("\n")
 
+	g.Printf("\t\tif _, ok := _%[1]s_cache[%[2]s]; ok {\n", m.Name, strings.Join(m.PkNameLowers, "]["))
+	g.Printf("\t\t\treturn &sheetdb.DuplicationError{FieldName: \"%s\"}\n", m.ThisKeyName)
+	g.Printf("\t\t}\n\n")
+
 	g.Printf("\t\t%[2]s := %[1]s{\n", m.Name, m.NameLower)
 	for _, f := range m.Fields {
 		g.Printf("\t\t\t%s: %s,\n", f.Name, f.NameLower)

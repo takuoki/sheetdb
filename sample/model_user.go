@@ -104,6 +104,10 @@ func _User_load(data *gsheets.Sheet) error {
 			return err
 		}
 
+		if _, ok := _User_cache[userID]; ok {
+			return &sheetdb.DuplicationError{FieldName: "UserID"}
+		}
+
 		user := User{
 			UserID:   userID,
 			Name:     name,

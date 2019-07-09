@@ -87,6 +87,10 @@ func _Bar_load(data *gsheets.Sheet) error {
 			return err
 		}
 
+		if _, ok := _Bar_cache[userID][datetime]; ok {
+			return &sheetdb.DuplicationError{FieldName: "Datetime"}
+		}
+
 		bar := Bar{
 			UserID:   userID,
 			Datetime: datetime,
