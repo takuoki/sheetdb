@@ -705,6 +705,13 @@ func (g *generator) outputDelete(m model) {
 		} else {
 			g.Printf("\tdelete(_%[1]s_cache[%[3]s], %[2]s)\n", child.Name, m.ThisKeyNameLower, strings.Join(prefixes(m.Parent.PkNames, "m."), "]["))
 		}
+		if len(child.UniqueKeyNames) > 0 {
+			g.Printf("\tfor _, v := range %s {\n", child.NameLowerPlural)
+			for _, f := range child.UniqueKeyNames {
+				g.Printf("\t\tdelete(_%[1]s_%[2]s_uniqueMap, v.%[2]s)\n", child.Name, f)
+			}
+			g.Printf("\t}\n")
+		}
 	}
 
 	g.Printf("\treturn nil\n")

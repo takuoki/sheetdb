@@ -98,10 +98,10 @@ type Foo struct {
 
 // FooChild is a struct of foo child.
 type FooChild struct {
-  UserID  int     `json:"user_id" db:"primarykey"`
-  FooID   int     `json:"foo_id" db:"primarykey"`
-  ChildID int     `json:"child_id" db:"primarykey"`
-  Value   float32 `json:"value"`
+  UserID  int    `json:"user_id" db:"primarykey"`
+  FooID   int    `json:"foo_id" db:"primarykey"`
+  ChildID int    `json:"child_id" db:"primarykey"`
+  Value   string `json:"value" db:"unique"`
 }
 
 //go:generate sheetdb-modeler -type=Bar -parent=User

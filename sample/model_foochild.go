@@ -33,10 +33,11 @@ const (
 )
 
 var (
-	_FooChild_mutex    = sync.RWMutex{}
-	_FooChild_cache    = map[int]map[int]map[int]*FooChild{} // map[userID][fooID][childID]*FooChild
-	_FooChild_rowNoMap = map[int]map[int]map[int]int{}       // map[userID][fooID][childID]rowNo
-	_FooChild_maxRowNo = 0
+	_FooChild_mutex           = sync.RWMutex{}
+	_FooChild_cache           = map[int]map[int]map[int]*FooChild{} // map[userID][fooID][childID]*FooChild
+	_FooChild_rowNoMap        = map[int]map[int]map[int]int{}       // map[userID][fooID][childID]rowNo
+	_FooChild_maxRowNo        = 0
+	_FooChild_Value_uniqueMap = map[string]*FooChild{}
 )
 
 func _() {
@@ -57,6 +58,7 @@ func _FooChild_load(data *gsheets.Sheet) error {
 	_FooChild_cache = map[int]map[int]map[int]*FooChild{}
 	_FooChild_rowNoMap = map[int]map[int]map[int]int{}
 	_FooChild_maxRowNo = 0
+	_FooChild_Value_uniqueMap = map[string]*FooChild{}
 
 	for i, r := range data.Rows() {
 		if i == 0 {
@@ -82,8 +84,8 @@ func _FooChild_load(data *gsheets.Sheet) error {
 		if err != nil {
 			return err
 		}
-		value, err := _FooChild_parseValue(r.Value(_FooChild_column_Value))
-		if err != nil {
+		value := r.Value(_FooChild_column_Value)
+		if err := _FooChild_validateValue(value, nil); err != nil {
 			return err
 		}
 
@@ -105,6 +107,7 @@ func _FooChild_load(data *gsheets.Sheet) error {
 		}
 		_FooChild_cache[fooChild.UserID][fooChild.FooID][fooChild.ChildID] = &fooChild
 		_FooChild_rowNoMap[fooChild.UserID][fooChild.FooID][fooChild.ChildID] = _FooChild_maxRowNo
+		_FooChild_Value_uniqueMap[fooChild.Value] = &fooChild
 	}
 
 	return nil
@@ -129,6 +132,17 @@ func GetFooChild(userID int, fooID int, childID int) (*FooChild, error) {
 		return nil, err
 	}
 	return m.GetFooChild(childID)
+}
+
+// GetFooChildByValue returns a fooChild by Value.
+// If it can not be found, this function returns *sheetdb.NotFoundError.
+func GetFooChildByValue(value string) (*FooChild, error) {
+	_FooChild_mutex.RLock()
+	defer _FooChild_mutex.RUnlock()
+	if v, ok := _FooChild_Value_uniqueMap[value]; ok {
+		return v, nil
+	}
+	return nil, &sheetdb.NotFoundError{Model: "FooChild"}
 }
 
 // FooChildQuery is used for selecting fooChildren.
@@ -204,9 +218,12 @@ func GetFooChildren(userID int, fooID int, opts ...FooChildQueryOption) ([]*FooC
 // AddFooChild adds new fooChild to foo.
 // ChildID is generated automatically.
 // If any fields are invalid, this method returns error.
-func (m *Foo) AddFooChild(value float32) (*FooChild, error) {
+func (m *Foo) AddFooChild(value string) (*FooChild, error) {
 	_FooChild_mutex.Lock()
 	defer _FooChild_mutex.Unlock()
+	if err := _FooChild_validateValue(value, nil); err != nil {
+		return nil, err
+	}
 	maxID := 0
 	for _, v := range _FooChild_cache[m.UserID][m.FooID] {
 		if maxID < v.ChildID {
@@ -233,13 +250,14 @@ func (m *Foo) AddFooChild(value float32) (*FooChild, error) {
 	}
 	_FooChild_cache[fooChild.UserID][fooChild.FooID][fooChild.ChildID] = fooChild
 	_FooChild_rowNoMap[fooChild.UserID][fooChild.FooID][fooChild.ChildID] = _FooChild_maxRowNo
+	_FooChild_Value_uniqueMap[fooChild.Value] = fooChild
 	return fooChild, nil
 }
 
 // AddFooChild adds new fooChild to foo.
 // ChildID is generated automatically.
 // If any fields are invalid, this function returns error.
-func AddFooChild(userID int, fooID int, value float32) (*FooChild, error) {
+func AddFooChild(userID int, fooID int, value string) (*FooChild, error) {
 	m, err := GetFoo(userID, fooID)
 	if err != nil {
 		return nil, err
@@ -250,26 +268,33 @@ func AddFooChild(userID int, fooID int, value float32) (*FooChild, error) {
 // UpdateFooChild updates fooChild.
 // If it can not be found, this method returns *sheetdb.NotFoundError.
 // If any fields are invalid, this method returns error.
-func (m *Foo) UpdateFooChild(childID int, value float32) (*FooChild, error) {
+func (m *Foo) UpdateFooChild(childID int, value string) (*FooChild, error) {
 	_FooChild_mutex.Lock()
 	defer _FooChild_mutex.Unlock()
 	fooChild, ok := _FooChild_cache[m.UserID][m.FooID][childID]
 	if !ok {
 		return nil, &sheetdb.NotFoundError{Model: "FooChild"}
 	}
+	if err := _FooChild_validateValue(value, &fooChild.Value); err != nil {
+		return nil, err
+	}
 	fooChildCopy := *fooChild
 	fooChildCopy.Value = value
 	if err := (&fooChildCopy)._asyncUpdate(); err != nil {
 		return nil, err
 	}
+	if fooChildCopy.Value != fooChild.Value {
+		delete(_FooChild_Value_uniqueMap, fooChild.Value)
+	}
 	*fooChild = fooChildCopy
+	_FooChild_Value_uniqueMap[fooChildCopy.Value] = &fooChildCopy
 	return fooChild, nil
 }
 
 // UpdateFooChild updates fooChild.
 // If it can not be found, this function returns *sheetdb.NotFoundError.
 // If any fields are invalid, this function returns error.
-func UpdateFooChild(userID int, fooID int, childID int, value float32) (*FooChild, error) {
+func UpdateFooChild(userID int, fooID int, childID int, value string) (*FooChild, error) {
 	m, err := GetFoo(userID, fooID)
 	if err != nil {
 		return nil, err
@@ -290,6 +315,7 @@ func (m *Foo) DeleteFooChild(childID int) error {
 		return err
 	}
 	delete(_FooChild_cache[m.UserID][m.FooID], childID)
+	delete(_FooChild_Value_uniqueMap, fooChild.Value)
 	return nil
 }
 
@@ -301,6 +327,18 @@ func DeleteFooChild(userID int, fooID int, childID int) error {
 		return err
 	}
 	return m.DeleteFooChild(childID)
+}
+
+func _FooChild_validateValue(value string, oldValue *string) error {
+	if value == "" {
+		return &sheetdb.EmptyStringError{FieldName: "Value"}
+	}
+	if oldValue == nil || *oldValue != value {
+		if _, ok := _FooChild_Value_uniqueMap[value]; ok {
+			return &sheetdb.DuplicationError{FieldName: "Value"}
+		}
+	}
+	return nil
 }
 
 func _FooChild_parseUserID(userID string) (int, error) {
@@ -325,14 +363,6 @@ func _FooChild_parseChildID(childID string) (int, error) {
 		return 0, &sheetdb.InvalidValueError{FieldName: "ChildID", Err: err}
 	}
 	return v, nil
-}
-
-func _FooChild_parseValue(value string) (float32, error) {
-	v, err := strconv.ParseFloat(value, 32)
-	if err != nil {
-		return 0, &sheetdb.InvalidValueError{FieldName: "Value", Err: err}
-	}
-	return float32(v), nil
 }
 
 func (m *FooChild) _asyncAdd(rowNo int) error {

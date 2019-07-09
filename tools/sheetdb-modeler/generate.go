@@ -21,6 +21,7 @@ type model struct {
 	PkTypes                  []string
 	NonPkNameLowers          []string
 	NonPkTypes               []string
+	UniqueKeyNames           []string
 	FieldNames               []string
 	FieldNameLowers          []string
 	FieldTypes               []string
@@ -244,6 +245,7 @@ func (s *search) buildModel(typ *ast.TypeSpec) *model {
 						f2.AllowEmpty = true
 					case "unique":
 						f2.Unique = true
+						m.UniqueKeyNames = append(m.UniqueKeyNames, f2.Name)
 					}
 				}
 				break

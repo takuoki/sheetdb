@@ -298,6 +298,9 @@ func DeleteUser(userID int) error {
 	delete(_User_Email_uniqueMap, user.Email)
 	delete(_Foo_cache, userID)
 	delete(_FooChild_cache, userID)
+	for _, v := range fooChildren {
+		delete(_FooChild_Value_uniqueMap, v.Value)
+	}
 	delete(_Bar_cache, userID)
 	return nil
 }
