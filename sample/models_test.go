@@ -11,8 +11,9 @@ import (
 )
 
 var (
-	datetime19590525, _ = sheetdb.NewDate("1959-05-25")
-	datetime19950914, _ = sheetdb.NewDate("1995-09-14")
+	date19590525, _           = sheetdb.NewDate("1959-05-25")
+	date19950914, _           = sheetdb.NewDate("1995-09-14")
+	datetime20190707000000, _ = sheetdb.NewDatetime("2019-07-07T00:00:00.000+09:00")
 )
 
 func _() {

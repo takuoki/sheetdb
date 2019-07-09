@@ -1,7 +1,6 @@
 package sample_test
 
 import (
-	"context"
 	"reflect"
 	"sort"
 	"testing"
@@ -11,9 +10,6 @@ import (
 )
 
 func TestGetUser(t *testing.T) {
-	if err := sample.LoadData(context.Background()); err != nil {
-		t.Fatalf("Unable to load data from spreadsheet: %v", err)
-	}
 	cases := map[string]struct {
 		id          int
 		name, email string
@@ -26,7 +22,7 @@ func TestGetUser(t *testing.T) {
 			name:     "Jorge B. Farley",
 			email:    "jorge.b.farley@sample.com",
 			sex:      sample.Male,
-			birthday: &datetime19590525,
+			birthday: &date19590525,
 		},
 		"empty-birthday": {
 			id:       10005,
@@ -44,6 +40,7 @@ func TestGetUser(t *testing.T) {
 			notFound: true,
 		},
 	}
+	sample.Reload(t)
 	for casename, c := range cases {
 		t.Run(casename, func(t *testing.T) {
 			user, err := sample.GetUser(c.id)
@@ -80,9 +77,6 @@ func TestGetUser(t *testing.T) {
 }
 
 func TestGetUseryEmail(t *testing.T) {
-	if err := sample.LoadData(context.Background()); err != nil {
-		t.Fatalf("Unable to load data from spreadsheet: %v", err)
-	}
 	cases := map[string]struct {
 		id          int
 		name, email string
@@ -102,6 +96,7 @@ func TestGetUseryEmail(t *testing.T) {
 			notFound: true,
 		},
 	}
+	sample.Reload(t)
 	for casename, c := range cases {
 		t.Run(casename, func(t *testing.T) {
 			user, err := sample.GetUserByEmail(c.email)
@@ -132,9 +127,6 @@ func TestGetUseryEmail(t *testing.T) {
 }
 
 func TestGetUsers(t *testing.T) {
-	if err := sample.LoadData(context.Background()); err != nil {
-		t.Fatalf("Unable to load data from spreadsheet: %v", err)
-	}
 	cases := map[string]struct {
 		filterFunc  func(user *sample.User) bool
 		sortFunc    func(users []*sample.User)
@@ -161,6 +153,7 @@ func TestGetUsers(t *testing.T) {
 			expectedIDs: nil,
 		},
 	}
+	sample.Reload(t)
 	for casename, c := range cases {
 		t.Run(casename, func(t *testing.T) {
 			users, err := sample.GetUsers(sample.UserFilter(c.filterFunc), sample.UserSort(c.sortFunc))
@@ -182,9 +175,6 @@ func TestGetUsers(t *testing.T) {
 }
 
 func TestAddUser(t *testing.T) {
-	if err := sample.LoadData(context.Background()); err != nil {
-		t.Fatalf("Unable to load data from spreadsheet: %v", err)
-	}
 	cases := map[string]struct {
 		name, email  string
 		sex          sample.Sex
@@ -196,39 +186,40 @@ func TestAddUser(t *testing.T) {
 			name:     "Betty M. Sinclair",
 			email:    "betty.m.sinclair@sample.com",
 			sex:      sample.Female,
-			birthday: &datetime19590525,
+			birthday: &date19590525,
 			expectedUser: sample.User{
 				UserID:   10007,
 				Name:     "Betty M. Sinclair",
 				Email:    "betty.m.sinclair@sample.com",
 				Sex:      sample.Female,
-				Birthday: &datetime19590525,
+				Birthday: &date19590525,
 			},
 		},
 		"name-empty": {
 			name:     "",
 			email:    "betty.m.sinclair@sample.com",
 			sex:      sample.Female,
-			birthday: &datetime19590525,
+			birthday: &date19590525,
 			err:      &sheetdb.EmptyStringError{FieldName: "Name"},
 		},
 		"email-empty": {
 			name:     "Betty M. Sinclair",
 			email:    "",
 			sex:      sample.Female,
-			birthday: &datetime19590525,
+			birthday: &date19590525,
 			err:      &sheetdb.EmptyStringError{FieldName: "Email"},
 		},
 		"email-duplicate": {
 			name:     "Betty M. Sinclair",
 			email:    "kathy.m.fisher@sample.com",
 			sex:      sample.Female,
-			birthday: &datetime19590525,
+			birthday: &date19590525,
 			err:      &sheetdb.DuplicationError{FieldName: "Email"},
 		},
 	}
 	for casename, c := range cases {
 		t.Run(casename, func(t *testing.T) {
+			sample.Reload(t)
 			user, err := sample.AddUser(c.name, c.email, c.sex, c.birthday)
 			if c.err == nil {
 				if err != nil {
@@ -257,9 +248,6 @@ func TestAddUser(t *testing.T) {
 					t.Errorf("User that GetUserByEmail returns does not match expected (case: %s, expected=%+v, actual=%+v)", casename, &c.expectedUser, user)
 					return
 				}
-				if err := sample.LoadData(context.Background()); err != nil {
-					t.Fatalf("Unable to load data from spreadsheet: %v", err)
-				}
 			} else {
 				if err == nil {
 					t.Errorf("Error must occur (case: %s)", casename)
@@ -275,9 +263,6 @@ func TestAddUser(t *testing.T) {
 }
 
 func TestUpdateUser(t *testing.T) {
-	if err := sample.LoadData(context.Background()); err != nil {
-		t.Fatalf("Unable to load data from spreadsheet: %v", err)
-	}
 	cases := map[string]struct {
 		id           int
 		name, email  string
@@ -291,13 +276,13 @@ func TestUpdateUser(t *testing.T) {
 			name:     "Betty M. Sinclair",
 			email:    "betty.m.sinclair@sample.com",
 			sex:      sample.Female,
-			birthday: &datetime19590525,
+			birthday: &date19590525,
 			expectedUser: sample.User{
 				UserID:   10004,
 				Name:     "Betty M. Sinclair",
 				Email:    "betty.m.sinclair@sample.com",
 				Sex:      sample.Female,
-				Birthday: &datetime19590525,
+				Birthday: &date19590525,
 			},
 		},
 		"update-name": {
@@ -305,13 +290,13 @@ func TestUpdateUser(t *testing.T) {
 			name:     "Betty M. Sinclair",
 			email:    "matthew.j.mclane@sample.com",
 			sex:      sample.Male,
-			birthday: &datetime19950914,
+			birthday: &date19950914,
 			expectedUser: sample.User{
 				UserID:   10004,
 				Name:     "Betty M. Sinclair",
 				Email:    "matthew.j.mclane@sample.com",
 				Sex:      sample.Male,
-				Birthday: &datetime19950914,
+				Birthday: &date19950914,
 			},
 		},
 		"not-found": {
@@ -323,7 +308,7 @@ func TestUpdateUser(t *testing.T) {
 			name:     "",
 			email:    "betty.m.sinclair@sample.com",
 			sex:      sample.Female,
-			birthday: &datetime19590525,
+			birthday: &date19590525,
 			err:      &sheetdb.EmptyStringError{FieldName: "Name"},
 		},
 		"email-empty": {
@@ -331,7 +316,7 @@ func TestUpdateUser(t *testing.T) {
 			name:     "Betty M. Sinclair",
 			email:    "",
 			sex:      sample.Female,
-			birthday: &datetime19590525,
+			birthday: &date19590525,
 			err:      &sheetdb.EmptyStringError{FieldName: "Email"},
 		},
 		"email-duplicate": {
@@ -339,12 +324,13 @@ func TestUpdateUser(t *testing.T) {
 			name:     "Betty M. Sinclair",
 			email:    "kathy.m.fisher@sample.com",
 			sex:      sample.Female,
-			birthday: &datetime19590525,
+			birthday: &date19590525,
 			err:      &sheetdb.DuplicationError{FieldName: "Email"},
 		},
 	}
 	for casename, c := range cases {
 		t.Run(casename, func(t *testing.T) {
+			sample.Reload(t)
 			oldUser, _ := sample.GetUser(c.id)
 			user, err := sample.UpdateUser(c.id, c.name, c.email, c.sex, c.birthday)
 			if c.err == nil {
@@ -380,8 +366,118 @@ func TestUpdateUser(t *testing.T) {
 						return
 					}
 				}
-				if err := sample.LoadData(context.Background()); err != nil {
-					t.Fatalf("Unable to load data from spreadsheet: %v", err)
+			} else {
+				if err == nil {
+					t.Errorf("Error must occur (case: %s)", casename)
+					return
+				}
+				if !reflect.DeepEqual(err, c.err) {
+					t.Errorf("Error does not match expected (case: %s, expected=%+v, actual=%+v)", casename, c.err, err)
+					return
+				}
+			}
+		})
+	}
+}
+
+func TestDeleteUser(t *testing.T) {
+	cases := map[string]struct {
+		id             int
+		email          string
+		fooIDs         []int
+		fooChildIDs    [][2]int
+		fooChildValues []string
+		barIDs         []sheetdb.Datetime
+		err            error
+	}{
+		"delete-single": {
+			id:    10005,
+			email: "judith.c.thrash@sample.com",
+		},
+		"delete-with-children": {
+			id:             10002,
+			email:          "guillermo.l.shanks@sample.com",
+			fooIDs:         []int{1, 2, 3},
+			fooChildIDs:    [][2]int{{1, 1}, {2, 1}},
+			fooChildValues: []string{"b", "h"},
+			barIDs:         []sheetdb.Datetime{datetime20190707000000},
+		},
+		"not-found": {
+			id:  10007,
+			err: &sheetdb.NotFoundError{Model: "User"},
+		},
+	}
+	for casename, c := range cases {
+		t.Run(casename, func(t *testing.T) {
+			sample.Reload(t)
+			// pre-check
+			if c.err == nil {
+				if _, err := sample.GetUserByEmail(c.email); err != nil {
+					t.Errorf("[Pre-check] Error must not occur in GetUserByEmail (case: %s, email=%s, err=%v)", casename, c.email, err)
+					return
+				}
+				for _, fooID := range c.fooIDs {
+					if _, err := sample.GetFoo(c.id, fooID); err != nil {
+						t.Errorf("[Pre-check] Error must not occur in GetFoo (case: %s, fooID=%d, err=%v)", casename, fooID, err)
+						return
+					}
+				}
+				for _, id := range c.fooChildIDs {
+					if _, err := sample.GetFooChild(c.id, id[0], id[1]); err != nil {
+						t.Errorf("[Pre-check] Error must not occur in GetFooChild (case: %s, fooID=%d, fooChildID=%d, err=%v)", casename, id[0], id[1], err)
+						return
+					}
+				}
+				for _, v := range c.fooChildValues {
+					if _, err := sample.GetFooChildByValue(v); err != nil {
+						t.Errorf("[Pre-check] Error must not occur in GetFooChildByValue (case: %s, value=%s, err=%v)", casename, v, err)
+						return
+					}
+				}
+				for _, barID := range c.barIDs {
+					if _, err := sample.GetBar(c.id, barID); err != nil {
+						t.Errorf("[Pre-check] Error must not occur in GetBar (case: %s, barID=%s, err=%v)", casename, barID, err)
+						return
+					}
+				}
+			}
+			err := sample.DeleteUser(c.id)
+			if c.err == nil {
+				if err != nil {
+					t.Errorf("Error must not occur in DeleteUser (case: %s, err=%v)", casename, err)
+					return
+				}
+				if _, err := sample.GetUser(c.id); !reflect.DeepEqual(err, &sheetdb.NotFoundError{Model: "User"}) {
+					t.Errorf("Error in GetUser does not match expected (case: %s, err=%v)", casename, err)
+					return
+				}
+				if _, err := sample.GetUserByEmail(c.email); !reflect.DeepEqual(err, &sheetdb.NotFoundError{Model: "User"}) {
+					t.Errorf("Error in GetUserByEmail does not match expected (case: %s, email=%s, err=%v)", casename, c.email, err)
+					return
+				}
+				for _, fooID := range c.fooIDs {
+					if _, err := sample.GetFoo(c.id, fooID); !reflect.DeepEqual(err, &sheetdb.NotFoundError{Model: "User"}) {
+						t.Errorf("Error in GetFoo does not match expected (case: %s, fooID=%d, err=%v)", casename, fooID, err)
+						return
+					}
+				}
+				for _, id := range c.fooChildIDs {
+					if _, err := sample.GetFooChild(c.id, id[0], id[1]); !reflect.DeepEqual(err, &sheetdb.NotFoundError{Model: "User"}) {
+						t.Errorf("Error in GetFooChild does not match expected (case: %s, fooID=%d, fooChildID=%d, err=%v)", casename, id[0], id[1], err)
+						return
+					}
+				}
+				for _, v := range c.fooChildValues {
+					if _, err := sample.GetFooChildByValue(v); !reflect.DeepEqual(err, &sheetdb.NotFoundError{Model: "FooChild"}) {
+						t.Errorf("Error in GetFooChildByValue does not match expected (case: %s, value=%s, err=%v)", casename, v, err)
+						return
+					}
+				}
+				for _, barID := range c.barIDs {
+					if _, err := sample.GetBar(c.id, barID); !reflect.DeepEqual(err, &sheetdb.NotFoundError{Model: "User"}) {
+						t.Errorf("Error in GetBar does not match expected (case: %s, barID=%s, err=%v)", casename, barID, err)
+						return
+					}
 				}
 			} else {
 				if err == nil {
