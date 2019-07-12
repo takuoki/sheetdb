@@ -142,7 +142,7 @@ func TestGetUser(t *testing.T) {
 					t.Fatalf("Email does not match expected (case: %s, expected=%s, actual=%s)", casename, c.email, user.Email)
 				}
 				if user.Sex != c.sex {
-					t.Fatalf("Sex does not match expected (case: %s, expected=%s, actual=%s)", casename, c.sex, user.Sex)
+					t.Fatalf("Sex does not match expected (case: %s, expected=%s, actual=%s)", casename, c.sex.String(), user.Sex.String())
 				}
 				if !reflect.DeepEqual(user.Birthday, c.birthday) {
 					t.Fatalf("Birthday does not match expected (case: %s, expected=%+v, actual=%+v)", casename, c.birthday, user.Birthday)

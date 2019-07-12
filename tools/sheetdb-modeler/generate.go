@@ -174,6 +174,7 @@ func (s *search) buildModel(typ *ast.TypeSpec) *model {
 		log.Fatalf("specified type is not struct type. (type=%s)", typ.Name.Name)
 	}
 
+	var existNonPk bool
 	for _, f := range st.Fields.List {
 		if len(f.Names) != 1 {
 			log.Fatalf("specify one field per line. (type=%s, fields=%v)", typ.Name.Name, f.Names)
@@ -233,6 +234,9 @@ func (s *search) buildModel(typ *ast.TypeSpec) *model {
 				for _, tag := range strings.Split(tags[4:len(tags)-1], ",") {
 					switch tag {
 					case "primarykey":
+						if existNonPk {
+							log.Fatalf("Field that is not primary key must not be defined before primary keys (model=%s)", typ.Name.Name)
+						}
 						f2.IsPk = true
 						m.PkNames = append(m.PkNames, f2.Name)
 						m.PkNameLowers = append(m.PkNameLowers, f2.NameLower)
@@ -254,9 +258,13 @@ func (s *search) buildModel(typ *ast.TypeSpec) *model {
 		if !f2.IsPk {
 			m.NonPkNameLowers = append(m.NonPkNameLowers, f2.NameLower)
 			m.NonPkTypes = append(m.NonPkTypes, f2.Typ)
+			existNonPk = true
 		}
 
 		m.Fields = append(m.Fields, f2)
+	}
+	if !existNonPk {
+		log.Fatalf("Define at least one non-primary key in the model. (model=%s)", typ.Name.Name)
 	}
 	for i := 0; i < len(m.Fields); i++ {
 		if m.Fields[i].Name != m.ThisKeyName {

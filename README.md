@@ -118,9 +118,10 @@ type Bar struct {
 ### <a name='Generatecodesfrommodels'></a>2. Generate codes from models
 
 You can generate in bulk with the `go generate` command by putting `//go:generate sheetdb-modeler` comments in the code of the target package.
+Please refer to [the sheetdb-modeler tool documentation](tools/sheetdb-modeler#Howtogeneratemodels) for details.
 
 ```bash
-go generate
+go generate ./sample
 ```
 
 ### <a name='SetupGooglespreadsheet'></a>3. Set up Google spreadsheet
@@ -187,91 +188,115 @@ The functions in this section are generated automatically by [sheetdb-modeler](t
 
 #### <a name='ReadGetSelect'></a>Read (Get/Select)
 
-```go
-user, err := GetUser(userID)
-foo, err := user.GetFoo(fooID)
-bar, err := user.GetBar(datetime)
-```
+`GetModelName` function returns an instance of that model by the primary key(s).
+If it can not be found, this function returns `*sheetdb.NotFoundError`.
 
 ```go
+user, err := GetUser(userID)
 foo, err := GetFoo(userID, fooID)
+fooChild, err := GetFooChild(userID, fooID, childID)
 bar, err := GetBar(userID, datetime)
 ```
 
-get by unique key
+If the model is a child model of another model, `GetModelName` method is also added to the parent model.
+
+```go
+foo, err := user.GetFoo(fooID)
+fooChild, err := foo.GetFooChild(childID)
+bar, err := user.GetBar(datetime)
+```
+
+For fields defined as unique, `GetModelNameByFieldName` function is also generated.
 
 ```go
 user, err := GetUserByEmail(email)
+fooChild, err := GetFooChildByValue(value)
 ```
 
-get list
+`GetModelNames` function returns all instances of that model.
+If the model is a child model of another model, this function returns all instances that parent model has.
 
 ```go
 users, err := GetUsers()
-foos, err := user.GetFoos()
-bars, err := user.GetBars()
-```
-
-```go
 foos, err := GetFoos(userID)
+fooChildren, err := GetFooChildren(userID, fooID)
 bars, err := GetBars(userID)
 ```
 
-filterable
+For child models, `GetModelNames` method is also added to the parent model.
 
 ```go
-Foos, err := user.GetFoos(FooFilter(func(foo *Foo) bool {
-  return foo.Value > 0
+foos, err := user.GetFoos()
+fooChildren, err := foo.GetFooChildren()
+bars, err := user.GetBars()
+```
+
+You can get filtered results using `ModelFilter` option.
+
+```go
+users, err := GetUsers(sample.UserFilter(func(user *sample.User) bool {
+  return user.Sex == sample.Male
 }))
 ```
 
-sortable
+You can also get sorted results using `ModelSort` option.
+If the sort option is not specified, the order of results is random.
 
 ```go
-bars, err := user.GetBars(BarSort(func(bars []*Bar) {
-  sort.Slice(bars, func(i, j int) bool {
-    return bars[i].Datetime.After(bars[j].Datetime)
+users, err := GetUsers(sample.UserSort(func(users []*sample.User) {
+  sort.Slice(users, func(i, j int) bool {
+    return users[i].UserID < users[j].UserID
   })
-}))
+})
 ```
 
 #### <a name='CreateAddInsert'></a>Create (Add/Insert)
 
-```go
-user, err := AddUser(name, email, sex, birthday)
-foo, err := user.AddFoo(value, note)
-bar, err := user.AddBar(datetime, value, note)
-```
+`AddModel` adds a new instance.
+If the primary key matches [the automatic numbering rule](tools/sheetdb-modeler#AutonumberingofID), it will be automatically numbered.
+For child models, `AddModel` method is added to the parent model.
 
 ```go
+user, err := AddUser(name, email, sex, birthday)
 foo, err := AddFoo(userID, value, note)
+fooChild, err := AddFooChild(userID, fooID, value)
 bar, err := AddBar(userID, datetime, value, note)
+
+foo, err := user.AddFoo(value, note)
+fooChild, err := foo.AddFooChild(value)
+bar, err := user.AddBar(datetime, value, note)
 ```
 
 #### <a name='Update'></a>Update
 
-```go
-user, err := UpdateUser(userID, name, email, sex, birthday)
-foo, err := user.UpdateFoo(fooID, value, note)
-bar, err := user.UpdateBar(datetime, value, note)
-```
+`UpdateModel` updates an existing instance.
+You can not change the primary key(s).
+For child models, `UpdateModel` method is added to the parent model.
 
 ```go
+user, err := UpdateUser(userID, name, email, sex, birthday)
 foo, err := UpdateFoo(userID, fooID, value, note)
+fooChild, err := UpdateFooChild(userID, fooID, childID, value)
 bar, err := UpdateBar(userID, datetime, value, note)
+
+foo, err := user.UpdateFoo(fooID, value, note)
+fooChild, err := foo.UpdateFooChild(childID, value, note)
+bar, err := user.UpdateBar(datetime, value, note)
 ```
 
 #### <a name='Delete'></a>Delete
 
-If the table has child tables, the delete function deletes the data of the child table in cascade.
+`DeleteModel` deletes an existing instance.
+If the model has child models, this function deletes the instances of the child model in cascade.
+For child models, `DeleteModel` method is added to the parent model.
 
 ```go
-err := DeleteUser(userID)
-err = user.DeleteFoo(fooID)
-err = user.DeleteBar(datetime)
-```
-
-```go
+err = DeleteUser(userID)
 err = DeleteFoo(userID, fooID)
+err = DeleteFooChild(userID, fooID, childID)
 err = DeleteBar(userID, datetime)
+
+err = user.DeleteFoo(fooID)
+err = foo.DeleteFooChild(childID)
+err = user.DeleteBar(datetime)
 ```

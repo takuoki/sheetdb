@@ -85,6 +85,7 @@ type TypeTest struct {
 	Float64Value   float64           `json:"float64_value"`
 	DateValue      sheetdb.Date      `json:"date_value"`
 	DatetimeValue  sheetdb.Datetime  `json:"datetime_value"`
+	CustomValue    Sex               `json:"custom_value"`
 	PBoolValue     *bool             `json:"p_bool_value"`
 	PIntValue      *int              `json:"p_int_value"`
 	PInt8Value     *int8             `json:"p_int8_value"`
@@ -100,4 +101,5 @@ type TypeTest struct {
 	PFloat64Value  *float64          `json:"p_float64_value"`
 	PDateValue     *sheetdb.Date     `json:"p_date_value"`
 	PDatetimeValue *sheetdb.Datetime `json:"p_datetime_value"`
+	PCustomValue   *Sex              `json:"p_custom_value"`
 }
