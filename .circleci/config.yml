@@ -46,7 +46,9 @@ jobs:
       - run:
           name: Testing
           command: |
+            go test -v -race -cover -coverprofile=coverage_sheetdb.out .
             go test -v -race -cover -coverprofile=coverage_sample.out ./sample/
+            go tool cover -html=coverage_sheetdb.out -o coverage_sheetdb.html
             go tool cover -html=coverage_sample.out -o coverage_sample.html
       - run:
           name: Set test result as artifacts

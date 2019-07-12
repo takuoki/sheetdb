@@ -18,7 +18,7 @@ func NewDate(date string) (Date, error) {
 	if err != nil {
 		return Date{}, err
 	}
-	return Date{d}, nil
+	return Date{d.UTC()}, nil
 }
 
 // String returns date string.
@@ -47,7 +47,7 @@ func NewDatetime(datetime string) (Datetime, error) {
 	if err != nil {
 		return Datetime{}, err
 	}
-	return Datetime{d}, nil
+	return Datetime{d.UTC()}, nil
 }
 
 // String returns datetime string.
