@@ -30,8 +30,11 @@ func NewSex(sex string) (Sex, error) {
 }
 
 // String returns sex string.
-func (s Sex) String() string {
-	switch s {
+func (s *Sex) String() string {
+	if s == nil {
+		return ""
+	}
+	switch *s {
 	case Male:
 		return "Male"
 	case Female:

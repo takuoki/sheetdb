@@ -24,7 +24,7 @@ var (
 	modelSetName  = flag.String("modelset", "default", "model set name")
 	initialNum    = flag.Int("initial", 1, "initial number of auto numbering")
 	test          = flag.String("test", "off", "test mode or not (set 'on' if you want to run in test mode)")
-	output        = flag.String("output", "", "output file name; default srcdir/<type>_model.go")
+	output        = flag.String("output", "", "output file name; default srcdir/model_<type>.go")
 )
 
 func usage() {

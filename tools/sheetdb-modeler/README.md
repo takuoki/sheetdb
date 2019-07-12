@@ -1,51 +1,167 @@
 # sheetdb-modeler
 
-作成したモデル（Goの構造体）を元に、CRUDのファンクションなどを自動生成するツール。
+A tool that automatically generates CRUD functions based on the defined model, Go structure.
 
-## Installation
+<!-- vscode-markdown-toc -->
+* [Installation](#Installation)
+* [How to write models](#Howtowritemodels)
+	* [Field type](#Fieldtype)
+	* [Primary key](#Primarykey)
+	* [Auto numbering of ID](#AutonumberingofID)
+	* [Constraints](#Constraints)
+		* [Non-null constraint](#Non-nullconstraint)
+		* [Unique constraint](#Uniqueconstraint)
+* [How to generate models](#Howtogeneratemodels)
+* [FAQ](#FAQ)
+	* [Why do I get compilation errors?](#WhydoIgetcompilationerrors)
+	* [What should I take care of for automated testing?](#WhatshouldItakecareofforautomatedtesting)
+
+<!-- vscode-markdown-toc-config
+	numbering=false
+	autoSave=true
+	/vscode-markdown-toc-config -->
+<!-- /vscode-markdown-toc -->
+
+## <a name='Installation'></a>Installation
 
 ```bash
 go get github.com/takuoki/sheetdb/tools/sheetdb-modeler
 ```
 
-## How to write models
+## <a name='Howtowritemodels'></a>How to write models
 
-### Type
+### <a name='Fieldtype'></a>Field type
 
-* 下記の型を構造体フィールドの型として使用可能です。
-  * string
-  * bool, *bool
-  * int, int8, int16, int32, int64, *int, *int8, *int16, *int32, *int64
-  * uint, uint8, uint16, uint32, uint64, *uint, *uint8, *uint16, *uint32, *uint64
-  * float32, float64, *float32, *float64
-  * sheetdb.Date, sheetdb.Datetime, *sheetdb.Date, *sheetdb.Datetime
-* Null許容のフィールドはポインタ指定してください。
-* ユーザ定義型を使用する場合は、対応するNewXXX関数を作成してください。
-  * Sex -> func NewSex(sex string) (Sex, error)
-* 現状、外部パッケージのユーザ定義型は使用できません。
+The following types and their pointer types are available as fields of models:
 
-### Primary key
+* string
+* bool
+* int, int8, int16, int32, int64
+* uint, uint8, uint16, uint32, uint64
+* float32, float64
+* sheetdb.Date, sheetdb.Datetime
 
-* AnnotationTagでPrimaryKeyがどれかを指定する
-* 子テーブルの場合は親テーブルのキーを含め複数指定する（順番通りに指定すること）
-* generate時、親テーブルの主キーが子テーブルの主キーに含まれていなければエラー
-* generate時、子テーブルの主キーは、親テーブルの主キーの数プラス1でなければエラー
-* generate時、primaryがNull許可（ポインタ型）の場合はエラー
+Define nullable fields with pointer type. However, the pointer type of string can not be used.
 
-### Auto numbering of ID
+You can use user-defined types. In this case, create `NewTypeName` function and `String` method at the same time.
 
-* 主キーの内、フィールド名がIDで終わり、かつ型がintの場合、自動採番とする（AddXXXの引数に含めない）
-  * 最上位のテーブルの場合、自動採番されるIDは行番号＋採番初期値-1となる
-  * 最上位以外のテーブルの場合、自動採番されるIDは同じ親テーブル内のIDの最大値+1となる（削除されたデータとの重複があり得る）（同じ親の中で最初の場合は採番初期値）
+```go
+type Sex int
 
-### Constraints
+func NewSex(sex string) (Sex, error) {
+  // ...
+}
 
-* non-null constraint
-  * 型がstringの場合、空文字を許容するかどうかを指定する（primaryとの同時指定不可）
-  * 型がstring以外の場合は、nullを許容する場合はポインタ型で定義する
-* unique constraint
-  * unique制約（複合は不可）が必要な場合は指定する（ひとまずstringのみ）
+func (s *Sex) String() string {
+  if s == nil {
+    return ""
+  }
+  // ...
+}
+```
 
-## How to generate models
+Currently, user-defined types in different packages are not available.
 
-* 親テーブル、子テーブルの関係は、generateコマンドの`-parent`, `-children`オプションで指定する
+### <a name='Primarykey'></a>Primary key
+
+Specify the primary key field using the annotation tag `primarykey`.
+In models without a parent model, the number of primary key fields is always one.
+For child models, the number of primary key fields is the number of parent models plus one (composite primary key).
+The key name, type and order must match the order of the parent model.
+Note that you can not use pointer type, string type with `allowempty` or `unique` tag as primary key type.
+
+### <a name='AutonumberingofID'></a>Auto numbering of ID
+
+A primary key which field name ends with "ID" and type is int is automatically numbered.
+This field is not specified as an argument of `AddModel` function.
+
+The rules for automatic numbering are as follows.
+
+* Models without a parent model
+
+  The automatically numbered ID is `Line number on Spreadsheet` + `Numbering initial value` - 1.
+  Even if data is deleted, IDs is not duplicated.
+
+* Child Models
+
+  The automatically assignumberedned ID is the maximum value of IDs in the same parent model + 1.
+  Numbering initial value if there is no data in the same parent model.
+  There may be duplication with deleted data.
+
+### <a name='Constraints'></a>Constraints
+
+#### <a name='Non-nullconstraint'></a>Non-null constraint
+
+If the field type is string, pointer type is not allowed, but it may contain empty string.
+However, empty string is not allowed unless you explicitly write the `allowempty` tag.
+
+If the field type is other than string, defining it as a pointer type makes the field nullable.
+If it is not defined as a pointer type, it can not be null according to Go's language specification.
+
+#### <a name='Uniqueconstraint'></a>Unique constraint
+
+If there is a field that you want to secure uniqueness other than the primary key, write a `unique` tag.
+Fields with the `unique` tag are globally unique, even if they are child models.
+Currently only available for string type fields.
+
+## <a name='Howtogeneratemodels'></a>How to generate models
+
+It is automatically generated by sheetdb-modeler command.
+You can generate in bulk with the `go generate` command by putting comments in the code of the target package.
+
+```go
+//go:generate sheetdb-modeler -type=User -children=Foo,FooChild,Bar -initial=10001
+```
+
+```bash
+go generate ./sample
+```
+
+The options are as follows.
+
+* `-type`
+
+  Type of structure to be generated automatically. Required.
+
+* `-parent`, `-children`
+
+  Specify if parent model and child model exist.
+  Specify multiple child models separated by commas.
+  Beware of deadlocks as they are locked in the order specified by the child model.
+
+* `-initial`
+
+  Set the initial value of automatic numbering.
+  It can not be specified if the primary key is not numbered automatically.
+
+* `-client`, `-modelset`
+
+  You can split data into multiple spreadsheets by using the client, and modelSet option.
+  However, models in parent-child relationships can not be divided into separate sheets.
+
+* `-output`
+
+  A file is created for each model (type), and you can specify a file name with the `-output` option.
+  The default is `model_typename.go`.
+
+* `-test`
+
+  For testing, It is an option to automatically generate code without writing only to a spreadsheet.
+  If the value is "on", it will be output in test mode.
+  Please refer to [the FAQ](#WhatshouldItakecareofforautomatedtesting) for more details.
+
+## <a name='FAQ'></a>FAQ
+
+### <a name='WhydoIgetcompilationerrors'></a>Why do I get compilation errors?
+
+Since commands are executed separately for each model, it is not possible to detect contradictions in option specification between models at the time of automatic generation.
+So we detect these contradictions with compilation errors in the `_` function.
+If there is a compilation error in this function, please check the comment and fix it.
+
+Note that there is a possibility of a bug in the tool if the automatic generation is successful but there are compilation errors in other than the `_` function.
+
+### <a name='WhatshouldItakecareofforautomatedtesting'></a>What should I take care of for automated testing?
+
+If the values ​​in the spreadsheet are updated each time you run an automated test, it will be difficult to run the test under the same conditions each time.
+You can avoid these problems by using auto-generated code with test mode when testing.
+If you do not want to destroy test data due to accidentally running a test in code not generated with test mode, you can make it a compile error by referring to the constant, like `TestMode_ModelName`, that is output only in test mode.
