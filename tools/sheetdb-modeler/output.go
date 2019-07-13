@@ -881,7 +881,7 @@ func (g *generator) outputAsync(m model, o option) {
 		}
 	}
 
-	g.Printf("\t\t\t\ttime.Now(),\n")
+	g.Printf("\t\t\t\ttime.Now().UTC(),\n")
 	g.Printf("\t\t\t\t\"\",\n")
 	g.Printf("\t\t\t},\n")
 	g.Printf("\t\t},\n")
@@ -918,7 +918,7 @@ func (g *generator) outputAsync(m model, o option) {
 		}
 	}
 
-	g.Printf("\t\t\t\ttime.Now(),\n")
+	g.Printf("\t\t\t\ttime.Now().UTC(),\n")
 	g.Printf("\t\t\t\t\"\",\n")
 	g.Printf("\t\t\t},\n")
 	g.Printf("\t\t},\n")
@@ -932,7 +932,7 @@ func (g *generator) outputAsync(m model, o option) {
 
 	// Delete
 	g.Printf("func (m *%[1]s) _asyncDelete(%[2]s) error {\n", m.Name, join(m.ChildrenNameLowerPlurals, m.ChildrenNames, " []*", ", "))
-	g.Printf("\tnow := time.Now()\n")
+	g.Printf("\tnow := time.Now().UTC()\n")
 	if !o.TestMode || len(m.Children) > 0 {
 		g.Printf("\tdata := []gsheets.UpdateValue{\n")
 	} else {

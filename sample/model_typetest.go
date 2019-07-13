@@ -851,7 +851,7 @@ func (m *TypeTest) _asyncAdd(rowNo int) error {
 				m.PDateValue.String(),
 				m.PDatetimeValue.String(),
 				m.PCustomValue.String(),
-				time.Now(),
+				time.Now().UTC(),
 				"",
 			},
 		},
@@ -899,7 +899,7 @@ func (m *TypeTest) _asyncUpdate() error {
 				m.PDateValue.String(),
 				m.PDatetimeValue.String(),
 				m.PCustomValue.String(),
-				time.Now(),
+				time.Now().UTC(),
 				"",
 			},
 		},
@@ -908,7 +908,7 @@ func (m *TypeTest) _asyncUpdate() error {
 }
 
 func (m *TypeTest) _asyncDelete() error {
-	now := time.Now()
+	now := time.Now().UTC()
 	data := []gsheets.UpdateValue{
 		{
 			SheetName: _TypeTest_sheetName,

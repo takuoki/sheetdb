@@ -364,7 +364,7 @@ func (m *Foo) _asyncAdd(rowNo int) error {
 				m.FooID,
 				m.Value,
 				m.Note,
-				time.Now(),
+				time.Now().UTC(),
 				"",
 			},
 		},
@@ -382,7 +382,7 @@ func (m *Foo) _asyncUpdate() error {
 				m.FooID,
 				m.Value,
 				m.Note,
-				time.Now(),
+				time.Now().UTC(),
 				"",
 			},
 		},
@@ -391,7 +391,7 @@ func (m *Foo) _asyncUpdate() error {
 }
 
 func (m *Foo) _asyncDelete(fooChildren []*FooChild) error {
-	now := time.Now()
+	now := time.Now().UTC()
 	data := []gsheets.UpdateValue{
 		{
 			SheetName: _Foo_sheetName,
