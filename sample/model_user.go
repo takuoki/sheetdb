@@ -367,7 +367,7 @@ func (m *User) _asyncAdd(rowNo int) error {
 				m.Email,
 				m.Sex.String(),
 				m.Birthday.String(),
-				time.Now(),
+				time.Now().UTC(),
 				"",
 			},
 		},
@@ -386,7 +386,7 @@ func (m *User) _asyncUpdate() error {
 				m.Email,
 				m.Sex.String(),
 				m.Birthday.String(),
-				time.Now(),
+				time.Now().UTC(),
 				"",
 			},
 		},
@@ -395,7 +395,7 @@ func (m *User) _asyncUpdate() error {
 }
 
 func (m *User) _asyncDelete(foos []*Foo, fooChildren []*FooChild, bars []*Bar) error {
-	now := time.Now()
+	now := time.Now().UTC()
 	data := []gsheets.UpdateValue{
 		{
 			SheetName: _User_sheetName,

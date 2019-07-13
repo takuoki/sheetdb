@@ -341,7 +341,7 @@ func (m *Bar) _asyncAdd(rowNo int) error {
 				m.Datetime.String(),
 				m.Value,
 				m.Note,
-				time.Now(),
+				time.Now().UTC(),
 				"",
 			},
 		},
@@ -359,7 +359,7 @@ func (m *Bar) _asyncUpdate() error {
 				m.Datetime.String(),
 				m.Value,
 				m.Note,
-				time.Now(),
+				time.Now().UTC(),
 				"",
 			},
 		},
@@ -368,7 +368,7 @@ func (m *Bar) _asyncUpdate() error {
 }
 
 func (m *Bar) _asyncDelete() error {
-	now := time.Now()
+	now := time.Now().UTC()
 	data := []gsheets.UpdateValue{
 		{
 			SheetName: _Bar_sheetName,
