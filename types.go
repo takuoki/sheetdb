@@ -13,12 +13,19 @@ type Date struct {
 }
 
 // NewDate returns new Date.
+// The argument "date" is parsed on local location.
 func NewDate(date string) (Date, error) {
 	d, err := time.Parse(dateFmt, date)
 	if err != nil {
 		return Date{}, err
 	}
 	return Date{d.UTC()}, nil
+}
+
+// Today returns new Date that represents today.
+func Today() Date {
+	d, _ := NewDate(time.Now().Format(dateFmt))
+	return d
 }
 
 // String returns date string.
@@ -48,6 +55,12 @@ func NewDatetime(datetime string) (Datetime, error) {
 		return Datetime{}, err
 	}
 	return Datetime{d.UTC()}, nil
+}
+
+// Now returns new Datetime that represents now.
+func Now() Datetime {
+	d, _ := NewDatetime(time.Now().Format(datetimeFmt))
+	return d
 }
 
 // String returns datetime string.
