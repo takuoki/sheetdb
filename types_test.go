@@ -49,6 +49,13 @@ func TestNewDate(t *testing.T) {
 	}
 }
 
+func TestToday(t *testing.T) {
+	today := sheetdb.Today()
+	if today.Hour() != 0 || today.Minute() != 0 || today.Second() != 0 || today.Nanosecond() != 0 {
+		t.Fatalf("Hour, Minute, Second and Nanosecond must be zero (today: %s)", today.Format(time.RFC3339Nano))
+	}
+}
+
 func TestNewDatetime(t *testing.T) {
 
 	_, offset := time.Now().Local().Zone()
@@ -98,5 +105,12 @@ func TestNewDatetime(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestNow(t *testing.T) {
+	now := sheetdb.Now()
+	if now.Nanosecond() != 0 {
+		t.Fatalf("Nanosecond must be zero (today: %s)", now.Format(time.RFC3339Nano))
 	}
 }
