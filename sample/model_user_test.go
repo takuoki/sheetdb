@@ -471,7 +471,7 @@ func TestDeleteUser(t *testing.T) {
 			fooChildValues: []struct {
 				fooID int
 				value string
-			}{{1, "b"}, {1, "h"}},
+			}{{1, "b"}, {2, "h"}},
 			barIDs: []sheetdb.Datetime{datetime20190707000000},
 		},
 		"not-found": {
@@ -499,7 +499,7 @@ func TestDeleteUser(t *testing.T) {
 				}
 				for _, v := range c.fooChildValues {
 					if _, err := sample.GetFooChildByValue(c.id, v.fooID, v.value); err != nil {
-						t.Fatalf("[Pre-check] Error must not occur in GetFooChildByValue (case: %s, value=%s, err=%v)", casename, v, err)
+						t.Fatalf("[Pre-check] Error must not occur in GetFooChildByValue (case: %s, value=%s, err=%v)", casename, v.value, err)
 					}
 				}
 				for _, barID := range c.barIDs {
@@ -530,8 +530,8 @@ func TestDeleteUser(t *testing.T) {
 					}
 				}
 				for _, v := range c.fooChildValues {
-					if _, err := sample.GetFooChildByValue(c.id, v.fooID, v.value); !reflect.DeepEqual(err, &sheetdb.NotFoundError{Model: "FooChild"}) {
-						t.Fatalf("Error in GetFooChildByValue does not match expected (case: %s, value=%s, err=%v)", casename, v, err)
+					if _, err := sample.GetFooChildByValue(c.id, v.fooID, v.value); !reflect.DeepEqual(err, &sheetdb.NotFoundError{Model: "User"}) {
+						t.Fatalf("Error in GetFooChildByValue does not match expected (case: %s, value=%s, err=%v)", casename, v.value, err)
 					}
 				}
 				for _, barID := range c.barIDs {

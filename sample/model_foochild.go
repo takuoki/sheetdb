@@ -104,10 +104,12 @@ func _FooChild_load(data *gsheets.Sheet) error {
 		if _, ok := _FooChild_cache[fooChild.UserID]; !ok {
 			_FooChild_cache[fooChild.UserID] = map[int]map[int]*FooChild{}
 			_FooChild_rowNoMap[fooChild.UserID] = map[int]map[int]int{}
+			_FooChild_Value_uniqueMap[fooChild.UserID] = map[int]map[string]*FooChild{}
 		}
 		if _, ok := _FooChild_cache[fooChild.UserID][fooChild.FooID]; !ok {
 			_FooChild_cache[fooChild.UserID][fooChild.FooID] = map[int]*FooChild{}
 			_FooChild_rowNoMap[fooChild.UserID][fooChild.FooID] = map[int]int{}
+			_FooChild_Value_uniqueMap[fooChild.UserID][fooChild.FooID] = map[string]*FooChild{}
 		}
 		_FooChild_cache[fooChild.UserID][fooChild.FooID][fooChild.ChildID] = &fooChild
 		_FooChild_rowNoMap[fooChild.UserID][fooChild.FooID][fooChild.ChildID] = _FooChild_maxRowNo
@@ -257,10 +259,12 @@ func (m *Foo) AddFooChild(value string) (*FooChild, error) {
 	if _, ok := _FooChild_cache[fooChild.UserID]; !ok {
 		_FooChild_cache[fooChild.UserID] = map[int]map[int]*FooChild{}
 		_FooChild_rowNoMap[fooChild.UserID] = map[int]map[int]int{}
+		_FooChild_Value_uniqueMap[fooChild.UserID] = map[int]map[string]*FooChild{}
 	}
 	if _, ok := _FooChild_cache[fooChild.UserID][fooChild.FooID]; !ok {
 		_FooChild_cache[fooChild.UserID][fooChild.FooID] = map[int]*FooChild{}
 		_FooChild_rowNoMap[fooChild.UserID][fooChild.FooID] = map[int]int{}
+		_FooChild_Value_uniqueMap[fooChild.UserID][fooChild.FooID] = map[string]*FooChild{}
 	}
 	_FooChild_cache[fooChild.UserID][fooChild.FooID][fooChild.ChildID] = fooChild
 	_FooChild_rowNoMap[fooChild.UserID][fooChild.FooID][fooChild.ChildID] = _FooChild_maxRowNo
@@ -347,7 +351,7 @@ func _FooChild_validateValue(value string, userID int, fooID int, oldValue strin
 	if value == "" {
 		return &sheetdb.EmptyStringError{FieldName: "Value"}
 	}
-	if oldValue != value {
+	if value != oldValue {
 		if _, ok := _FooChild_Value_uniqueMap[userID][fooID][value]; ok {
 			return &sheetdb.DuplicationError{FieldName: "Value"}
 		}

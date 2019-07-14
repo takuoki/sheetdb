@@ -38,7 +38,7 @@ var (
 	_User_cache           = map[int]*User{} // map[userID]*User
 	_User_rowNoMap        = map[int]int{}   // map[userID]rowNo
 	_User_maxRowNo        = 0
-	_User_Email_uniqueMap = map[string]*User{}
+	_User_Email_uniqueMap = map[string]*User{} // map[email]*User
 )
 
 func _() {
@@ -92,7 +92,7 @@ func _User_load(data *gsheets.Sheet) error {
 			return err
 		}
 		email := r.Value(_User_column_Email)
-		if err := _User_validateEmail(email, nil); err != nil {
+		if err := _User_validateEmail(email, ""); err != nil {
 			return err
 		}
 		sex, err := _User_parseSex(r.Value(_User_column_Sex))
@@ -214,7 +214,7 @@ func AddUser(name string, email string, sex Sex, birthday *sheetdb.Date) (*User,
 	if err := _User_validateName(name); err != nil {
 		return nil, err
 	}
-	if err := _User_validateEmail(email, nil); err != nil {
+	if err := _User_validateEmail(email, ""); err != nil {
 		return nil, err
 	}
 	user := &User{
@@ -247,7 +247,7 @@ func UpdateUser(userID int, name string, email string, sex Sex, birthday *sheetd
 	if err := _User_validateName(name); err != nil {
 		return nil, err
 	}
-	if err := _User_validateEmail(email, &user.Email); err != nil {
+	if err := _User_validateEmail(email, user.Email); err != nil {
 		return nil, err
 	}
 	userCopy := *user
@@ -314,11 +314,11 @@ func _User_validateName(name string) error {
 	return nil
 }
 
-func _User_validateEmail(email string, oldEmail *string) error {
+func _User_validateEmail(email string, oldEmail string) error {
 	if email == "" {
 		return &sheetdb.EmptyStringError{FieldName: "Email"}
 	}
-	if oldEmail == nil || *oldEmail != email {
+	if email != oldEmail {
 		if _, ok := _User_Email_uniqueMap[email]; ok {
 			return &sheetdb.DuplicationError{FieldName: "Email"}
 		}
