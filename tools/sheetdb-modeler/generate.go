@@ -38,9 +38,9 @@ type model struct {
 }
 
 type option struct {
+	Initial      int
 	ClientName   string
 	ModelSetName string
-	Initial      int
 	TestMode     bool
 }
 
@@ -100,9 +100,9 @@ func (g *generator) generate(typeName, parentName, childrenNames, clientName, mo
 	}
 
 	opt := option{
+		Initial:      initialNum,
 		ClientName:   clientName,
 		ModelSetName: modelSetName,
-		Initial:      initialNum,
 		TestMode:     testMode,
 	}
 

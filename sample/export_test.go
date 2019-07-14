@@ -20,9 +20,9 @@ var (
 	loadedFooChildCache          = map[int]map[int]map[int]*FooChild{} // map[userID][fooID][childID]*FooChild
 	loadedFooChildRowNoMap       = map[int]map[int]map[int]int{}       // map[userID][fooID][childID]rowNo
 	loadedFooChildMaxRowNo       = 0
-	loadedFooChildValueUniqueMap = map[string]*FooChild{}
-	loadedBarCache               = map[int]map[sheetdb.Datetime]*Bar{} // map[userID][datetime]*Bar
-	loadedBarRowNoMap            = map[int]map[sheetdb.Datetime]int{}  // map[userID][datetime]rowNo
+	loadedFooChildValueUniqueMap = map[int]map[int]map[string]*FooChild{} // map[userID][fooID][value]*FooChild
+	loadedBarCache               = map[int]map[sheetdb.Datetime]*Bar{}    // map[userID][datetime]*Bar
+	loadedBarRowNoMap            = map[int]map[sheetdb.Datetime]int{}     // map[userID][datetime]rowNo
 	loadedBarMaxRowNo            = 0
 	loadedTypeTestCache          = map[int]*TypeTest{} // map[id]*TypeTest
 	loadedTypeTestRowNoMap       = map[int]int{}       // map[id]rowNo
@@ -159,11 +159,17 @@ func copyFooChildRowNoMap(m map[int]map[int]map[int]int) map[int]map[int]map[int
 	return r
 }
 
-func copyFooChildValueMap(m map[string]*FooChild) map[string]*FooChild {
-	r := map[string]*FooChild{}
+func copyFooChildValueMap(m map[int]map[int]map[string]*FooChild) map[int]map[int]map[string]*FooChild {
+	r := map[int]map[int]map[string]*FooChild{}
 	for k, v := range m {
-		f := *v
-		r[k] = &f
+		r[k] = map[int]map[string]*FooChild{}
+		for k2, v2 := range v {
+			r[k][k2] = map[string]*FooChild{}
+			for k3, v3 := range v2 {
+				f := *v3
+				r[k][k2][k3] = &f
+			}
+		}
 	}
 	return r
 }

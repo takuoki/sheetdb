@@ -163,7 +163,7 @@ Set the created client in the package global variable. The name of the variable 
 var dbClient *sheetdb.Client
 
 // Initialize initializes this package.
-func Initialize() error {
+func Initialize(ctx context.Context) error {
   client, err := sheetdb.New(
     ctx,
     `{"installed":{"client_id":"..."}`, // Google API credentials
@@ -207,25 +207,25 @@ bar, err := user.GetBar(datetime)
 ```
 
 For fields defined as unique, `GetModelNameByFieldName` function is also generated.
+For child models, this method is also added to the parent model.
 
 ```go
 user, err := GetUserByEmail(email)
-fooChild, err := GetFooChildByValue(value)
+fooChild, err := GetFooChildByValue(userID, fooID, value)
+
+fooChild, err := foo.GetFooChildByValue(value)
 ```
 
 `GetModelNames` function returns all instances of that model.
 If the model is a child model of another model, this function returns all instances that parent model has.
+For child models, this method is also added to the parent model.
 
 ```go
 users, err := GetUsers()
 foos, err := GetFoos(userID)
 fooChildren, err := GetFooChildren(userID, fooID)
 bars, err := GetBars(userID)
-```
 
-For child models, `GetModelNames` method is also added to the parent model.
-
-```go
 foos, err := user.GetFoos()
 fooChildren, err := foo.GetFooChildren()
 bars, err := user.GetBars()

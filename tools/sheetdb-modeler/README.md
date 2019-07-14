@@ -101,7 +101,7 @@ If it is not defined as a pointer type, it can not be null according to Go's lan
 #### <a name='Uniqueconstraint'></a>Unique constraint
 
 If there is a field that you want to secure uniqueness other than the primary key, write a `unique` tag.
-Fields with the `unique` tag are globally unique, even if they are child models.
+Fields with the `unique` tag are unique in the same parent model, if they are child models.
 Currently only available for string type fields.
 
 ## <a name='Howtogeneratemodels'></a>How to generate models

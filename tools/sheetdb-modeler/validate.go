@@ -103,6 +103,9 @@ func (g *generator) validateField(f field, m model) error {
 		if f.Typ != "string" {
 			return fmt.Errorf("Must not put an 'unique' tag on non-string field (model=%s, field=%s)", m.Name, f.Name)
 		}
+		if f.AllowEmpty {
+			return fmt.Errorf("Must not put an 'allowempty' and 'unique' tag on same field (model=%s, field=%s)", m.Name, f.Name)
+		}
 	}
 
 	return nil

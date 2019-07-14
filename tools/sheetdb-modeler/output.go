@@ -104,7 +104,12 @@ func (g *generator) outputVar(m model) {
 	g.Printf("\t_%s_maxRowNo = 0\n", m.Name)
 	for _, f := range m.Fields {
 		if f.Unique {
-			g.Printf("\t_%[1]s_%[2]s_uniqueMap = map[string]*%[1]s{}\n", m.Name, f.Name)
+			if m.Parent == nil {
+				g.Printf("\t_%[1]s_%[2]s_uniqueMap = map[string]*%[1]s{} // map[%[3]s]*%[1]s\n", m.Name, f.Name, f.NameLower)
+			} else {
+				g.Printf("\t_%[1]s_%[2]s_uniqueMap = map[%[3]s]map[string]*%[1]s{} // map[%[4]s][%[5]s]*%[1]s\n", m.Name, f.Name,
+					strings.Join(m.Parent.PkTypes, "]map["), strings.Join(m.Parent.PkNameLowers, "]["), f.NameLower)
+			}
 		}
 	}
 	g.Printf(")\n\n")
@@ -161,7 +166,11 @@ func (g *generator) outputLoad(m model) {
 	g.Printf("\t_%s_maxRowNo = 0\n", m.Name)
 	for _, f := range m.Fields {
 		if f.Unique {
-			g.Printf("\t_%[1]s_%[2]s_uniqueMap = map[string]*%[1]s{}\n", m.Name, f.Name)
+			if m.Parent == nil {
+				g.Printf("\t_%[1]s_%[2]s_uniqueMap = map[string]*%[1]s{}\n", m.Name, f.Name)
+			} else {
+				g.Printf("\t_%[1]s_%[2]s_uniqueMap = map[%[3]s]map[string]*%[1]s{}\n", m.Name, f.Name, strings.Join(m.Parent.PkTypes, "]map["))
+			}
 		}
 	}
 	g.Printf("\n")
@@ -182,7 +191,11 @@ func (g *generator) outputLoad(m model) {
 		if f.Typ == "string" {
 			g.Printf("\t\t%[3]s := r.Value(_%[1]s_column_%[2]s)\n", m.Name, f.Name, f.NameLower)
 			if f.Unique {
-				g.Printf("\t\tif err := _%[1]s_validate%[2]s(%[3]s, nil); err != nil {\n", m.Name, f.Name, f.NameLower)
+				if m.Parent == nil {
+					g.Printf("\t\tif err := _%[1]s_validate%[2]s(%[3]s, \"\"); err != nil {\n", m.Name, f.Name, f.NameLower)
+				} else {
+					g.Printf("\t\tif err := _%[1]s_validate%[2]s(%[3]s, %[4]s, \"\"); err != nil {\n", m.Name, f.Name, f.NameLower, strings.Join(m.Parent.PkNameLowers, ", "))
+				}
 			} else {
 				g.Printf("\t\tif err := _%[1]s_validate%[2]s(%[3]s); err != nil {\n", m.Name, f.Name, f.NameLower)
 			}
@@ -211,7 +224,11 @@ func (g *generator) outputLoad(m model) {
 	g.Printf("\t\t_%[1]s_rowNoMap[%[2]s] = _%[1]s_maxRowNo\n", m.Name, strings.Join(prefixes(m.PkNames, m.NameLower+"."), "]["))
 	for _, f := range m.Fields {
 		if f.Unique {
-			g.Printf("\t\t_%[1]s_%[2]s_uniqueMap[%[3]s.%[2]s] = &%[3]s\n", m.Name, f.Name, m.NameLower)
+			if m.Parent == nil {
+				g.Printf("\t\t_%[1]s_%[2]s_uniqueMap[%[3]s.%[2]s] = &%[3]s\n", m.Name, f.Name, m.NameLower)
+			} else {
+				g.Printf("\t\t_%[1]s_%[2]s_uniqueMap[%[4]s][%[3]s.%[2]s] = &%[3]s\n", m.Name, f.Name, m.NameLower, strings.Join(prefixes(m.Parent.PkNames, m.NameLower+"."), "]["))
+			}
 		}
 	}
 	g.Printf("\t}\n\n")
@@ -221,51 +238,29 @@ func (g *generator) outputLoad(m model) {
 }
 
 func (g *generator) outputParentMap(m model) {
-	for i, f := range m.PkNames {
-		if f == m.ThisKeyName {
-			break
-		}
-		g.Printf("if _, ok := _%s_cache", m.Name)
-		for j, f2 := range m.PkNames {
-			if j > i {
-				break
+	for i := 0; i < len(m.PkNames)-1; i++ {
+		g.Printf("if _, ok := _%[1]s_cache[%[2]s]; !ok {\n", m.Name,
+			strings.Join(prefixes(m.PkNames[:i+1], m.NameLower+"."), "]["))
+		g.Printf("\t_%[1]s_cache[%[2]s] = map[%[3]s]*%[1]s{}\n", m.Name,
+			strings.Join(prefixes(m.PkNames[:i+1], m.NameLower+"."), "]["),
+			strings.Join(m.PkTypes[i+1:], "]map["))
+		g.Printf("\t	_%[1]s_rowNoMap[%[2]s] = map[%[3]s]int{}\n", m.Name,
+			strings.Join(prefixes(m.PkNames[:i+1], m.NameLower+"."), "]["),
+			strings.Join(m.PkTypes[i+1:], "]map["))
+		if m.Parent != nil {
+			for _, f := range m.Fields {
+				if f.Unique {
+					if i < len(m.PkNames)-2 {
+						g.Printf("\t_%[1]s_%[2]s_uniqueMap[%[3]s] = map[%[4]s]map[string]*%[1]s{}\n", m.Name, f.Name,
+							strings.Join(prefixes(m.PkNames[:i+1], m.NameLower+"."), "]["),
+							strings.Join(m.Parent.PkTypes[i+1:], "]map["))
+					} else {
+						g.Printf("\t_%[1]s_%[2]s_uniqueMap[%[3]s] = map[string]*%[1]s{}\n", m.Name, f.Name,
+							strings.Join(prefixes(m.PkNames[:i+1], m.NameLower+"."), "]["))
+					}
+				}
 			}
-			g.Printf("[%s.%s]", m.NameLower, f2)
 		}
-		g.Printf("; !ok {\n")
-		// cache map
-		g.Printf("\t	_%[1]s_cache", m.Name)
-		for j, f2 := range m.PkNames {
-			if j > i {
-				break
-			}
-			g.Printf("[%s.%s]", m.NameLower, f2)
-		}
-		g.Printf(" = ")
-		for j, f2 := range m.PkTypes {
-			if j <= i {
-				continue
-			}
-			g.Printf("map[%s]", f2)
-		}
-		g.Printf("*%[1]s{}\n", m.Name)
-		// rowNo map
-		g.Printf("\t	_%[1]s_rowNoMap", m.Name)
-		for j, f2 := range m.PkNames {
-			if j > i {
-				break
-			}
-			g.Printf("[%s.%s]", m.NameLower, f2)
-		}
-		g.Printf(" = ")
-		for j, f2 := range m.PkTypes {
-			if j <= i {
-				continue
-			}
-			g.Printf("map[%s]", f2)
-		}
-		g.Printf("int{}\n")
-
 		g.Printf("}\n")
 	}
 }
@@ -306,16 +301,36 @@ func (g *generator) outputGet(m model) {
 
 	for _, f := range m.Fields {
 		if f.Unique {
-			g.Printf("// Get%[1]sBy%[3]s returns a %[2]s by %[3]s.\n", m.Name, m.NameLower, f.Name)
-			g.Printf("// If it can not be found, this function returns *sheetdb.NotFoundError.\n")
-			g.Printf("func Get%[1]sBy%[2]s(%[3]s %[4]s) (*%[1]s, error) {\n", m.Name, f.Name, f.NameLower, f.Typ)
-			g.Printf("\t_%s_mutex.RLock()\n", m.Name)
-			g.Printf("\tdefer _%s_mutex.RUnlock()\n", m.Name)
-			g.Printf("\tif v, ok := _%s_%s_uniqueMap[%s]; ok {\n", m.Name, f.Name, f.NameLower)
-			g.Printf("\t\treturn v, nil\n")
-			g.Printf("\t}\n")
-			g.Printf("\treturn nil, &sheetdb.NotFoundError{Model: \"%s\"}\n", m.Name)
-			g.Printf("}\n\n")
+			if m.Parent == nil {
+				g.Printf("// Get%[1]sBy%[3]s returns a %[2]s by %[3]s.\n", m.Name, m.NameLower, f.Name)
+				g.Printf("// If it can not be found, this function returns *sheetdb.NotFoundError.\n")
+				g.Printf("func Get%[1]sBy%[2]s(%[3]s string) (*%[1]s, error) {\n", m.Name, f.Name, f.NameLower)
+				g.Printf("\t_%s_mutex.RLock()\n", m.Name)
+				g.Printf("\tdefer _%s_mutex.RUnlock()\n", m.Name)
+				g.Printf("\tif v, ok := _%s_%s_uniqueMap[%s]; ok {\n", m.Name, f.Name, f.NameLower)
+				g.Printf("\t\treturn v, nil\n")
+				g.Printf("\t}\n")
+				g.Printf("\treturn nil, &sheetdb.NotFoundError{Model: \"%s\"}\n", m.Name)
+				g.Printf("}\n\n")
+			} else {
+				g.Printf("// Get%[1]sBy%[3]s returns a %[2]s by %[3]s.\n", m.Name, m.NameLower, f.Name)
+				g.Printf("// If it can not be found, this method returns *sheetdb.NotFoundError.\n")
+				g.Printf("func (m *%[4]s) Get%[1]sBy%[2]s(%[3]s string) (*%[1]s, error) {\n", m.Name, f.Name, f.NameLower, m.Parent.Name)
+				g.Printf("\t_%s_mutex.RLock()\n", m.Name)
+				g.Printf("\tdefer _%s_mutex.RUnlock()\n", m.Name)
+				g.Printf("\tif v, ok := _%[1]s_%[2]s_uniqueMap[%[4]s][%[3]s]; ok {\n", m.Name, f.Name, f.NameLower, strings.Join(prefixes(m.Parent.PkNames, "m."), "]["))
+				g.Printf("\t\treturn v, nil\n")
+				g.Printf("\t}\n")
+				g.Printf("\treturn nil, &sheetdb.NotFoundError{Model: \"%s\"}\n", m.Name)
+				g.Printf("}\n\n")
+
+				g.Printf("// Get%[1]sBy%[3]s returns a %[2]s by %[3]s.\n", m.Name, m.NameLower, f.Name)
+				g.Printf("// If it can not be found, this function returns *sheetdb.NotFoundError.\n")
+				g.Printf("func Get%[1]sBy%[2]s(%[4]s, %[3]s string) (*%[1]s, error) {\n", m.Name, f.Name, f.NameLower, join(m.Parent.PkNameLowers, m.Parent.PkTypes, " ", ", "))
+				g.outputGetParent(*m.Parent, true, 0)
+				g.Printf("\treturn m.Get%[1]sBy%[2]s(%[3]s)\n", m.Name, f.Name, f.NameLower)
+				g.Printf("}\n\n")
+			}
 		}
 	}
 }
@@ -472,7 +487,11 @@ func (g *generator) outputAdd(m model, o option) {
 	for _, f := range m.Fields {
 		if !f.IsPk && f.Typ == "string" {
 			if f.Unique {
-				g.Printf("\tif err := _%[1]s_validate%[2]s(%[3]s, nil); err != nil {\n", m.Name, f.Name, f.NameLower)
+				if m.Parent == nil {
+					g.Printf("\tif err := _%[1]s_validate%[2]s(%[3]s, \"\"); err != nil {\n", m.Name, f.Name, f.NameLower)
+				} else {
+					g.Printf("\tif err := _%[1]s_validate%[2]s(%[3]s, %[4]s, \"\"); err != nil {\n", m.Name, f.Name, f.NameLower, strings.Join(prefixes(m.Parent.PkNames, "m."), ", "))
+				}
 				g.Printf("\t\treturn nil, err\n")
 				g.Printf("\t}\n")
 			} else {
@@ -524,7 +543,11 @@ func (g *generator) outputAdd(m model, o option) {
 	g.Printf("\t_%[1]s_rowNoMap[%[2]s] = _%[1]s_maxRowNo\n", m.Name, strings.Join(prefixes(m.PkNames, m.NameLower+"."), "]["))
 	for _, f := range m.Fields {
 		if f.Unique {
-			g.Printf("\t_%[1]s_%[2]s_uniqueMap[%[3]s.%[2]s] = %[3]s\n", m.Name, f.Name, m.NameLower)
+			if m.Parent == nil {
+				g.Printf("\t_%[1]s_%[2]s_uniqueMap[%[3]s.%[2]s] = %[3]s\n", m.Name, f.Name, m.NameLower)
+			} else {
+				g.Printf("\t_%[1]s_%[2]s_uniqueMap[%[4]s][%[3]s.%[2]s] = %[3]s\n", m.Name, f.Name, m.NameLower, strings.Join(prefixes(m.Parent.PkNames, m.NameLower+"."), "]["))
+			}
 		}
 	}
 	g.Printf("\treturn %s, nil\n", m.NameLower)
@@ -581,7 +604,11 @@ func (g *generator) outputUpdate(m model) {
 	for _, f := range m.Fields {
 		if !f.IsPk && f.Typ == "string" {
 			if f.Unique {
-				g.Printf("\tif err := _%[1]s_validate%[3]s(%[4]s, &%[2]s.%[3]s); err != nil {\n", m.Name, m.NameLower, f.Name, f.NameLower)
+				if m.Parent == nil {
+					g.Printf("\tif err := _%[1]s_validate%[3]s(%[4]s, %[2]s.%[3]s); err != nil {\n", m.Name, m.NameLower, f.Name, f.NameLower)
+				} else {
+					g.Printf("\tif err := _%[1]s_validate%[3]s(%[4]s, %[5]s, %[2]s.%[3]s); err != nil {\n", m.Name, m.NameLower, f.Name, f.NameLower, strings.Join(prefixes(m.Parent.PkNames, "m."), ", "))
+				}
 			} else {
 				g.Printf("\tif err := _%[1]s_validate%[2]s(%[3]s); err != nil {\n", m.Name, f.Name, f.NameLower)
 			}
@@ -605,7 +632,11 @@ func (g *generator) outputUpdate(m model) {
 	for _, f := range m.Fields {
 		if f.Unique {
 			g.Printf("\tif %[1]sCopy.%[2]s != %[1]s.%[2]s {\n", m.NameLower, f.Name)
-			g.Printf("\t\tdelete(_%[1]s_%[3]s_uniqueMap, %[2]s.%[3]s)\n", m.Name, m.NameLower, f.Name)
+			if m.Parent == nil {
+				g.Printf("\t\tdelete(_%[1]s_%[3]s_uniqueMap, %[2]s.%[3]s)\n", m.Name, m.NameLower, f.Name)
+			} else {
+				g.Printf("\t\tdelete(_%[1]s_%[3]s_uniqueMap[%[4]s], %[2]s.%[3]s)\n", m.Name, m.NameLower, f.Name, strings.Join(prefixes(m.Parent.PkNames, "m."), "]["))
+			}
 			g.Printf("\t}\n")
 		}
 	}
@@ -613,7 +644,11 @@ func (g *generator) outputUpdate(m model) {
 	g.Printf("\t*%[1]s = %[1]sCopy\n", m.NameLower)
 	for _, f := range m.Fields {
 		if f.Unique {
-			g.Printf("\t_%[1]s_%[3]s_uniqueMap[%[2]sCopy.%[3]s] = &%[2]sCopy\n", m.Name, m.NameLower, f.Name)
+			if m.Parent == nil {
+				g.Printf("\t_%[1]s_%[3]s_uniqueMap[%[2]sCopy.%[3]s] = &%[2]sCopy\n", m.Name, m.NameLower, f.Name)
+			} else {
+				g.Printf("\t_%[1]s_%[3]s_uniqueMap[%[4]s][%[2]sCopy.%[3]s] = &%[2]sCopy\n", m.Name, m.NameLower, f.Name, strings.Join(prefixes(m.Parent.PkNames, "m."), "]["))
+			}
 		}
 	}
 	g.Printf("\treturn %s, nil\n", m.NameLower)
@@ -700,21 +735,24 @@ func (g *generator) outputDelete(m model) {
 	}
 	for _, f := range m.Fields {
 		if f.Unique {
-			g.Printf("\tdelete(_%[1]s_%[3]s_uniqueMap, %[2]s.%[3]s)\n", m.Name, m.NameLower, f.Name)
+			if m.Parent == nil {
+				g.Printf("\tdelete(_%[1]s_%[3]s_uniqueMap, %[2]s.%[3]s)\n", m.Name, m.NameLower, f.Name)
+			} else {
+				g.Printf("\tdelete(_%[1]s_%[3]s_uniqueMap[%[4]s], %[2]s.%[3]s)\n", m.Name, m.NameLower, f.Name, strings.Join(prefixes(m.Parent.PkNames, "m."), "]["))
+			}
 		}
 	}
 	for _, child := range m.Children {
 		if m.Parent == nil {
 			g.Printf("\tdelete(_%[1]s_cache, %[2]s)\n", child.Name, m.ThisKeyNameLower)
+			for _, f := range child.UniqueKeyNames {
+				g.Printf("\tdelete(_%[1]s_%[2]s_uniqueMap, %[3]s)\n", child.Name, f, m.ThisKeyNameLower)
+			}
 		} else {
 			g.Printf("\tdelete(_%[1]s_cache[%[3]s], %[2]s)\n", child.Name, m.ThisKeyNameLower, strings.Join(prefixes(m.Parent.PkNames, "m."), "]["))
-		}
-		if len(child.UniqueKeyNames) > 0 {
-			g.Printf("\tfor _, v := range %s {\n", child.NameLowerPlural)
 			for _, f := range child.UniqueKeyNames {
-				g.Printf("\t\tdelete(_%[1]s_%[2]s_uniqueMap, v.%[2]s)\n", child.Name, f)
+				g.Printf("\tdelete(_%[1]s_%[2]s_uniqueMap[%[4]s], %[3]s)\n", child.Name, f, m.ThisKeyNameLower, strings.Join(prefixes(m.Parent.PkNames, "m."), "]["))
 			}
-			g.Printf("\t}\n")
 		}
 	}
 
@@ -752,7 +790,11 @@ func (g *generator) outputValidate(m model) {
 			continue
 		}
 		if f.Unique {
-			g.Printf("func _%[1]s_validate%[2]s(%[3]s string, old%[2]s *string) error {\n", m.Name, f.Name, f.NameLower)
+			if m.Parent == nil {
+				g.Printf("func _%[1]s_validate%[2]s(%[3]s string, old%[2]s string) error {\n", m.Name, f.Name, f.NameLower)
+			} else {
+				g.Printf("func _%[1]s_validate%[2]s(%[3]s string, %[4]s, old%[2]s string) error {\n", m.Name, f.Name, f.NameLower, join(m.Parent.PkNameLowers, m.Parent.PkTypes, " ", ", "))
+			}
 		} else {
 			g.Printf("func _%[1]s_validate%[2]s(%[3]s string) error {\n", m.Name, f.Name, f.NameLower)
 		}
@@ -764,8 +806,12 @@ func (g *generator) outputValidate(m model) {
 		}
 
 		if f.Unique {
-			g.Printf("\tif old%[1]s == nil || *old%[1]s != %[2]s {\n", f.Name, f.NameLower)
-			g.Printf("\t\tif _, ok := _%[1]s_%[2]s_uniqueMap[%[3]s]; ok {\n", m.Name, f.Name, f.NameLower)
+			g.Printf("\tif %[2]s != old%[1]s {\n", f.Name, f.NameLower)
+			if m.Parent == nil {
+				g.Printf("\t\tif _, ok := _%[1]s_%[2]s_uniqueMap[%[3]s]; ok {\n", m.Name, f.Name, f.NameLower)
+			} else {
+				g.Printf("\t\tif _, ok := _%[1]s_%[2]s_uniqueMap[%[4]s][%[3]s]; ok {\n", m.Name, f.Name, f.NameLower, strings.Join(m.Parent.PkNameLowers, "]["))
+			}
 			g.Printf("\t\t\treturn &sheetdb.DuplicationError{FieldName: \"%s\"}\n", f.Name)
 			g.Printf("\t\t}\n")
 			g.Printf("\t}\n")

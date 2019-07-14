@@ -37,7 +37,7 @@ var (
 	_FooChild_cache           = map[int]map[int]map[int]*FooChild{} // map[userID][fooID][childID]*FooChild
 	_FooChild_rowNoMap        = map[int]map[int]map[int]int{}       // map[userID][fooID][childID]rowNo
 	_FooChild_maxRowNo        = 0
-	_FooChild_Value_uniqueMap = map[string]*FooChild{}
+	_FooChild_Value_uniqueMap = map[int]map[int]map[string]*FooChild{} // map[userID][fooID][value]*FooChild
 )
 
 func _() {
@@ -58,7 +58,7 @@ func _FooChild_load(data *gsheets.Sheet) error {
 	_FooChild_cache = map[int]map[int]map[int]*FooChild{}
 	_FooChild_rowNoMap = map[int]map[int]map[int]int{}
 	_FooChild_maxRowNo = 0
-	_FooChild_Value_uniqueMap = map[string]*FooChild{}
+	_FooChild_Value_uniqueMap = map[int]map[int]map[string]*FooChild{}
 
 	for i, r := range data.Rows() {
 		if i == 0 {
@@ -85,7 +85,7 @@ func _FooChild_load(data *gsheets.Sheet) error {
 			return err
 		}
 		value := r.Value(_FooChild_column_Value)
-		if err := _FooChild_validateValue(value, nil); err != nil {
+		if err := _FooChild_validateValue(value, userID, fooID, ""); err != nil {
 			return err
 		}
 
@@ -104,14 +104,16 @@ func _FooChild_load(data *gsheets.Sheet) error {
 		if _, ok := _FooChild_cache[fooChild.UserID]; !ok {
 			_FooChild_cache[fooChild.UserID] = map[int]map[int]*FooChild{}
 			_FooChild_rowNoMap[fooChild.UserID] = map[int]map[int]int{}
+			_FooChild_Value_uniqueMap[fooChild.UserID] = map[int]map[string]*FooChild{}
 		}
 		if _, ok := _FooChild_cache[fooChild.UserID][fooChild.FooID]; !ok {
 			_FooChild_cache[fooChild.UserID][fooChild.FooID] = map[int]*FooChild{}
 			_FooChild_rowNoMap[fooChild.UserID][fooChild.FooID] = map[int]int{}
+			_FooChild_Value_uniqueMap[fooChild.UserID][fooChild.FooID] = map[string]*FooChild{}
 		}
 		_FooChild_cache[fooChild.UserID][fooChild.FooID][fooChild.ChildID] = &fooChild
 		_FooChild_rowNoMap[fooChild.UserID][fooChild.FooID][fooChild.ChildID] = _FooChild_maxRowNo
-		_FooChild_Value_uniqueMap[fooChild.Value] = &fooChild
+		_FooChild_Value_uniqueMap[fooChild.UserID][fooChild.FooID][fooChild.Value] = &fooChild
 	}
 
 	return nil
@@ -139,14 +141,24 @@ func GetFooChild(userID int, fooID int, childID int) (*FooChild, error) {
 }
 
 // GetFooChildByValue returns a fooChild by Value.
-// If it can not be found, this function returns *sheetdb.NotFoundError.
-func GetFooChildByValue(value string) (*FooChild, error) {
+// If it can not be found, this method returns *sheetdb.NotFoundError.
+func (m *Foo) GetFooChildByValue(value string) (*FooChild, error) {
 	_FooChild_mutex.RLock()
 	defer _FooChild_mutex.RUnlock()
-	if v, ok := _FooChild_Value_uniqueMap[value]; ok {
+	if v, ok := _FooChild_Value_uniqueMap[m.UserID][m.FooID][value]; ok {
 		return v, nil
 	}
 	return nil, &sheetdb.NotFoundError{Model: "FooChild"}
+}
+
+// GetFooChildByValue returns a fooChild by Value.
+// If it can not be found, this function returns *sheetdb.NotFoundError.
+func GetFooChildByValue(userID int, fooID int, value string) (*FooChild, error) {
+	m, err := GetFoo(userID, fooID)
+	if err != nil {
+		return nil, err
+	}
+	return m.GetFooChildByValue(value)
 }
 
 // FooChildQuery is used for selecting fooChildren.
@@ -225,7 +237,7 @@ func GetFooChildren(userID int, fooID int, opts ...FooChildQueryOption) ([]*FooC
 func (m *Foo) AddFooChild(value string) (*FooChild, error) {
 	_FooChild_mutex.Lock()
 	defer _FooChild_mutex.Unlock()
-	if err := _FooChild_validateValue(value, nil); err != nil {
+	if err := _FooChild_validateValue(value, m.UserID, m.FooID, ""); err != nil {
 		return nil, err
 	}
 	maxID := 0
@@ -247,14 +259,16 @@ func (m *Foo) AddFooChild(value string) (*FooChild, error) {
 	if _, ok := _FooChild_cache[fooChild.UserID]; !ok {
 		_FooChild_cache[fooChild.UserID] = map[int]map[int]*FooChild{}
 		_FooChild_rowNoMap[fooChild.UserID] = map[int]map[int]int{}
+		_FooChild_Value_uniqueMap[fooChild.UserID] = map[int]map[string]*FooChild{}
 	}
 	if _, ok := _FooChild_cache[fooChild.UserID][fooChild.FooID]; !ok {
 		_FooChild_cache[fooChild.UserID][fooChild.FooID] = map[int]*FooChild{}
 		_FooChild_rowNoMap[fooChild.UserID][fooChild.FooID] = map[int]int{}
+		_FooChild_Value_uniqueMap[fooChild.UserID][fooChild.FooID] = map[string]*FooChild{}
 	}
 	_FooChild_cache[fooChild.UserID][fooChild.FooID][fooChild.ChildID] = fooChild
 	_FooChild_rowNoMap[fooChild.UserID][fooChild.FooID][fooChild.ChildID] = _FooChild_maxRowNo
-	_FooChild_Value_uniqueMap[fooChild.Value] = fooChild
+	_FooChild_Value_uniqueMap[fooChild.UserID][fooChild.FooID][fooChild.Value] = fooChild
 	return fooChild, nil
 }
 
@@ -279,7 +293,7 @@ func (m *Foo) UpdateFooChild(childID int, value string) (*FooChild, error) {
 	if !ok {
 		return nil, &sheetdb.NotFoundError{Model: "FooChild"}
 	}
-	if err := _FooChild_validateValue(value, &fooChild.Value); err != nil {
+	if err := _FooChild_validateValue(value, m.UserID, m.FooID, fooChild.Value); err != nil {
 		return nil, err
 	}
 	fooChildCopy := *fooChild
@@ -288,10 +302,10 @@ func (m *Foo) UpdateFooChild(childID int, value string) (*FooChild, error) {
 		return nil, err
 	}
 	if fooChildCopy.Value != fooChild.Value {
-		delete(_FooChild_Value_uniqueMap, fooChild.Value)
+		delete(_FooChild_Value_uniqueMap[m.UserID][m.FooID], fooChild.Value)
 	}
 	*fooChild = fooChildCopy
-	_FooChild_Value_uniqueMap[fooChildCopy.Value] = &fooChildCopy
+	_FooChild_Value_uniqueMap[m.UserID][m.FooID][fooChildCopy.Value] = &fooChildCopy
 	return fooChild, nil
 }
 
@@ -319,7 +333,7 @@ func (m *Foo) DeleteFooChild(childID int) error {
 		return err
 	}
 	delete(_FooChild_cache[m.UserID][m.FooID], childID)
-	delete(_FooChild_Value_uniqueMap, fooChild.Value)
+	delete(_FooChild_Value_uniqueMap[m.UserID][m.FooID], fooChild.Value)
 	return nil
 }
 
@@ -333,12 +347,12 @@ func DeleteFooChild(userID int, fooID int, childID int) error {
 	return m.DeleteFooChild(childID)
 }
 
-func _FooChild_validateValue(value string, oldValue *string) error {
+func _FooChild_validateValue(value string, userID int, fooID int, oldValue string) error {
 	if value == "" {
 		return &sheetdb.EmptyStringError{FieldName: "Value"}
 	}
-	if oldValue == nil || *oldValue != value {
-		if _, ok := _FooChild_Value_uniqueMap[value]; ok {
+	if value != oldValue {
+		if _, ok := _FooChild_Value_uniqueMap[userID][fooID][value]; ok {
 			return &sheetdb.DuplicationError{FieldName: "Value"}
 		}
 	}
