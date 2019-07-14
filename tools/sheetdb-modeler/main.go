@@ -20,11 +20,11 @@ var (
 	typeName      = flag.String("type", "", "type name; must be set")
 	parentName    = flag.String("parent", "", "parent type name")
 	childrenNames = flag.String("children", "", "comma-separated list of children type names")
+	initialNum    = flag.Int("initial", 1, "initial number of auto numbering")
 	clientName    = flag.String("client", "dbClient", "variable name of sheetdb package client")
 	modelSetName  = flag.String("modelset", "default", "model set name")
-	initialNum    = flag.Int("initial", 1, "initial number of auto numbering")
-	test          = flag.String("test", "off", "test mode or not (set 'on' if you want to run in test mode)")
 	output        = flag.String("output", "", "output file name; default srcdir/model_<type>.go")
+	test          = flag.String("test", "off", "test mode or not (set 'on' if you want to run in test mode)")
 )
 
 func usage() {
