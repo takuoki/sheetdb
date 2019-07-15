@@ -247,7 +247,7 @@ users, err := GetUsers(sample.UserSort(func(users []*sample.User) {
   sort.Slice(users, func(i, j int) bool {
     return users[i].UserID < users[j].UserID
   })
-})
+}))
 ```
 
 #### <a name='CreateAddInsert'></a>Create (Add/Insert)

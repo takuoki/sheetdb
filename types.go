@@ -17,7 +17,7 @@ type Date struct {
 func NewDate(date string) (Date, error) {
 	d, err := time.Parse(dateFmt, date)
 	if err != nil {
-		return Date{}, err
+		return Date{}, &InvalidFormatError{Err: err}
 	}
 	return Date{d.UTC()}, nil
 }
@@ -52,7 +52,7 @@ type Datetime struct {
 func NewDatetime(datetime string) (Datetime, error) {
 	d, err := time.Parse(datetimeFmt, datetime)
 	if err != nil {
-		return Datetime{}, err
+		return Datetime{}, &InvalidFormatError{Err: err}
 	}
 	return Datetime{d.UTC()}, nil
 }
