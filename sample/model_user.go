@@ -181,16 +181,16 @@ func UserSort(sortFunc func(users []*User)) func(query *UserQuery) *UserQuery {
 // If there are no user to return, this function returns an nil array.
 // If the sort option is not specified, the order of users is random.
 func GetUsers(opts ...UserQueryOption) ([]*User, error) {
-	userQuery := &UserQuery{}
+	query := &UserQuery{}
 	for _, opt := range opts {
-		userQuery = opt(userQuery)
+		query = opt(query)
 	}
 	_User_mutex.RLock()
 	defer _User_mutex.RUnlock()
 	var users []*User
-	if userQuery.filter != nil {
+	if query.filter != nil {
 		for _, v := range _User_cache {
-			if userQuery.filter(v) {
+			if query.filter(v) {
 				users = append(users, v)
 			}
 		}
@@ -199,8 +199,8 @@ func GetUsers(opts ...UserQueryOption) ([]*User, error) {
 			users = append(users, v)
 		}
 	}
-	if userQuery.sort != nil {
-		userQuery.sort(users)
+	if query.sort != nil {
+		query.sort(users)
 	}
 	return users, nil
 }

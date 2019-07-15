@@ -175,16 +175,16 @@ func FooSort(sortFunc func(foos []*Foo)) func(query *FooQuery) *FooQuery {
 // If there are no foo to return, this method returns an nil array.
 // If the sort option is not specified, the order of foos is random.
 func (m *User) GetFoos(opts ...FooQueryOption) ([]*Foo, error) {
-	fooQuery := &FooQuery{}
+	query := &FooQuery{}
 	for _, opt := range opts {
-		fooQuery = opt(fooQuery)
+		query = opt(query)
 	}
 	_Foo_mutex.RLock()
 	defer _Foo_mutex.RUnlock()
 	var foos []*Foo
-	if fooQuery.filter != nil {
+	if query.filter != nil {
 		for _, v := range _Foo_cache[m.UserID] {
-			if fooQuery.filter(v) {
+			if query.filter(v) {
 				foos = append(foos, v)
 			}
 		}
@@ -193,8 +193,8 @@ func (m *User) GetFoos(opts ...FooQueryOption) ([]*Foo, error) {
 			foos = append(foos, v)
 		}
 	}
-	if fooQuery.sort != nil {
-		fooQuery.sort(foos)
+	if query.sort != nil {
+		query.sort(foos)
 	}
 	return foos, nil
 }
