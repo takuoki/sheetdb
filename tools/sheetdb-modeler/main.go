@@ -21,6 +21,7 @@ var (
 	parentName    = flag.String("parent", "", "parent type name")
 	childrenNames = flag.String("children", "", "comma-separated list of children type names")
 	initialNum    = flag.Int("initial", 1, "initial number of auto numbering")
+	private       = flag.Bool("private", false, "output private functions instead of public")
 	clientName    = flag.String("client", "dbClient", "variable name of sheetdb package client")
 	modelSetName  = flag.String("modelset", "default", "model set name")
 	output        = flag.String("output", "", "output file name; default srcdir/model_<type>.go")
@@ -64,7 +65,7 @@ func main() {
 	g.parsePackage(dir)
 
 	// Run generate.
-	g.generate(*typeName, *parentName, *childrenNames, *clientName, *modelSetName, *initialNum, *test == "on")
+	g.generate(*typeName, *parentName, *childrenNames, *clientName, *modelSetName, *initialNum, *private, *test == "on")
 
 	// Format the output.
 	src := g.format()
