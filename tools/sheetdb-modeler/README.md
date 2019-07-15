@@ -134,6 +134,10 @@ The options are as follows.
   Set the initial value of automatic numbering.
   It can not be specified if the primary key is not numbered automatically.
 
+* `-private`
+
+  If you want to customize the interface for an external package, output the code with private mode and wrap them.
+
 * `-client`, `-modelset`
 
   You can split data into multiple spreadsheets by using the client, and modelSet option.
@@ -146,7 +150,7 @@ The options are as follows.
 
 * `-test`
 
-  For testing, It is an option to automatically generate code without writing only to a spreadsheet.
+  For testing, it is an option to automatically generate code without writing only to a spreadsheet.
   If the value is "on", it will be output in test mode.
   Please refer to [the FAQ](#WhatshouldItakecareofforautomatedtesting) for more details.
 

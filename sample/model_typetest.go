@@ -319,16 +319,16 @@ func TypeTestSort(sortFunc func(typeTests []*TypeTest)) func(query *TypeTestQuer
 // If there are no typeTest to return, this function returns an nil array.
 // If the sort option is not specified, the order of typeTests is random.
 func GetTypeTests(opts ...TypeTestQueryOption) ([]*TypeTest, error) {
-	typeTestQuery := &TypeTestQuery{}
+	query := &TypeTestQuery{}
 	for _, opt := range opts {
-		typeTestQuery = opt(typeTestQuery)
+		query = opt(query)
 	}
 	_TypeTest_mutex.RLock()
 	defer _TypeTest_mutex.RUnlock()
 	var typeTests []*TypeTest
-	if typeTestQuery.filter != nil {
+	if query.filter != nil {
 		for _, v := range _TypeTest_cache {
-			if typeTestQuery.filter(v) {
+			if query.filter(v) {
 				typeTests = append(typeTests, v)
 			}
 		}
@@ -337,8 +337,8 @@ func GetTypeTests(opts ...TypeTestQueryOption) ([]*TypeTest, error) {
 			typeTests = append(typeTests, v)
 		}
 	}
-	if typeTestQuery.sort != nil {
-		typeTestQuery.sort(typeTests)
+	if query.sort != nil {
+		query.sort(typeTests)
 	}
 	return typeTests, nil
 }

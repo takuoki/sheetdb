@@ -165,16 +165,16 @@ func BarSort(sortFunc func(bars []*Bar)) func(query *BarQuery) *BarQuery {
 // If there are no bar to return, this method returns an nil array.
 // If the sort option is not specified, the order of bars is random.
 func (m *User) GetBars(opts ...BarQueryOption) ([]*Bar, error) {
-	barQuery := &BarQuery{}
+	query := &BarQuery{}
 	for _, opt := range opts {
-		barQuery = opt(barQuery)
+		query = opt(query)
 	}
 	_Bar_mutex.RLock()
 	defer _Bar_mutex.RUnlock()
 	var bars []*Bar
-	if barQuery.filter != nil {
+	if query.filter != nil {
 		for _, v := range _Bar_cache[m.UserID] {
-			if barQuery.filter(v) {
+			if query.filter(v) {
 				bars = append(bars, v)
 			}
 		}
@@ -183,8 +183,8 @@ func (m *User) GetBars(opts ...BarQueryOption) ([]*Bar, error) {
 			bars = append(bars, v)
 		}
 	}
-	if barQuery.sort != nil {
-		barQuery.sort(bars)
+	if query.sort != nil {
+		query.sort(bars)
 	}
 	return bars, nil
 }
