@@ -2,6 +2,15 @@ package sheetdb
 
 import "fmt"
 
+// InvalidFormatError means that the format is invalid.
+type InvalidFormatError struct {
+	Err error
+}
+
+func (e *InvalidFormatError) Error() string {
+	return fmt.Sprintf("Format is invalid: %v", e.Err)
+}
+
 // NotFoundError means that model is not found.
 type NotFoundError struct {
 	Model string
